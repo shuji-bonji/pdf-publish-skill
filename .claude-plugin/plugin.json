@@ -1,0 +1,26 @@
+{
+  "$schema": "https://raw.githubusercontent.com/anthropics/claude-code/main/.claude-plugin/plugin.schema.json",
+  "name": "pdf-publish",
+  "version": "0.1.0",
+  "description": "PDF の出力（納品）パイプラインを編成する Skill。pdf-writer-mcp で生成・編集し、pdf-reader-mcp で読み戻し、pdf-verify-mcp（veraPDF）で品質ゲートを掛ける write → read-back → verify ループを回して、Publish Report 付きで納品する。PDF/UA-1（アクセシブル PDF）・PDF/A-3 添付（電帳法）・タグ付きフォーム修復に対応。pdf-trust（受入監査）の対。",
+  "author": {
+    "name": "shuji-bonji",
+    "email": "bonji@mikuro.jp",
+    "url": "https://github.com/shuji-bonji"
+  },
+  "homepage": "https://github.com/shuji-bonji/pdf-publish-skill",
+  "repository": "https://github.com/shuji-bonji/pdf-publish-skill",
+  "license": "MIT",
+  "keywords": [
+    "pdf",
+    "skill",
+    "publish",
+    "pdf-generation",
+    "pdf-ua",
+    "accessibility",
+    "pdf-a",
+    "verapdf",
+    "quality-gate",
+    "denchoho"
+  ]
+}

@@ -1,0 +1,83 @@
+# pdf-publish-skill
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Skill](https://img.shields.io/badge/Claude-Skill-D97757?logo=anthropic&logoColor=white)](https://github.com/shuji-bonji/pdf-publish-skill)
+
+🌐 [English version (README.md)](./README.md)
+
+[PDF family](https://github.com/shuji-bonji#-pdf-family) の MCP サーバ群を編成して、PDF の**生成から納品までを品質ゲート付きで回す** **Claude Skill**。pdf-writer-mcp で書き、pdf-reader-mcp で読み戻し、pdf-verify-mcp（veraPDF）で機械採点する **write → read-back → verify ループ**を実行し、根拠付きの **Publish Report** を添えて納品します。
+
+[pdf-trust-skill](https://github.com/shuji-bonji/pdf-trust-skill)（受け取った PDF を監査する）の**対**であり、こちらは「送り出す PDF を保証する」側です。
+
+> **スコープ**: 本 Skill が保証するのは**構造・準拠性・抽出可能性**であって、文章内容の正しさではありません。合否判定は必ず pdf-verify-mcp（veraPDF 委譲）の結果を根拠とし、Skill 自身は判定しません。
+
+## 何を提供するのか
+
+このリポジトリは **MCP server ではなく Skill** です。ユーザーが「PDF/UA で作って」「品質保証付きで PDF 化して」と頼んだときに、Claude が PDF family の MCP を**どう組み合わせて使うか**をまとめた行動指針です。
+
+```mermaid
+graph LR
+  subgraph skill["pdf-publish Skill (このリポジトリ)"]
+    S1["品質ゲート水準<br/>none / readback / conformance"]
+    S2["修正ループ<br/>違反 clause → writer 操作対応表"]
+    S3["Publish Report<br/>+ 実行ログ (JSONL)"]
+  end
+  subgraph loop["write → read-back → verify"]
+    W["pdf-writer-mcp<br/>(必須)"] --> R["pdf-reader-mcp<br/>(推奨・観測)"]
+    R --> V["pdf-verify-mcp<br/>(品質ゲートで必須・判定)"]
+    V -->|"違反 → 修正 (上限3回)"| W
+  end
+  skill -->|orchestrate| loop
+```
+
+### なぜ MCP ではなく Skill なのか
+
+PDF family の設計原則は「**決定論的計算は MCP サーバ、手順・判断・知識は Skill**」。出力パイプラインは純粋なオーケストレーション（順序・ゲート水準・エラー分岐・報告）であり、実作業は writer / reader / verify が担います。
+
+### 学習データ工場として
+
+このループは PDF family の北極星（PDF 専門 LLM）の**学習データ工場**でもあります。verify の合否がラベルになるため、opt-in の実行ログ（JSONL）を残せます。違反があった実行こそ負例 + 修正列として価値があります。
+
+## パイプラインの流れ
+
+1. **要件確認** — 品質ゲート水準（`none` / `readback` / `conformance`）、フォント（`tagged` は埋め込みフォント必須）、電帳法（PDF/A-3 添付）、署名済み入力の扱い
+2. **生成・編集**（writer） — create → `tag_form_fields` → しおり・注釈 → ページ番号・透かし（自動 Artifact 化）→ 添付 → フォーム記入、の順で直列化
+3. **読み戻し**（reader・観測のみ） — テキスト抽出・フォント埋め込み・構造木・メタデータ
+4. **品質ゲート**（verify） — `validate_conformance`（PDF/UA-1 は veraPDF 106 規則）
+5. **修正ループ**（上限 3 回） — 違反 clause → writer 操作の対応表で修正・再検証
+6. **納品** — Publish Report（判定エンジン・規則数・warnings 全件・人手レビュー事項を明記）
+
+## 前提 MCP
+
+| MCP | 必須/任意 | 役割 |
+|---|---|---|
+| [@shuji-bonji/pdf-writer-mcp](https://github.com/shuji-bonji/pdf-writer-mcp) (v0.8.0+) | **必須** | 生成・編集・PDF/UA 修復 |
+| [@shuji-bonji/pdf-verify-mcp](https://github.com/shuji-bonji/pdf-verify-mcp) | 品質ゲートで**必須** | veraPDF 委譲の準拠判定 |
+| [@shuji-bonji/pdf-reader-mcp](https://github.com/shuji-bonji/pdf-reader-mcp) | 推奨 | 読み戻し（観測） |
+| [@shuji-bonji/pdf-spec-mcp](https://github.com/shuji-bonji/pdf-spec-mcp) | 任意 | 違反時の ISO 条項引用 |
+
+## インストール
+
+- **Claude Code**: `/plugin marketplace add shuji-bonji/claude-plugins` → `/plugin install pdf-publish@shuji-bonji`
+- **Cowork**: Settings → Capabilities → Skills でこのリポジトリの `.plugin`（Releases 参照）を追加
+- **手動 clone**: `git clone https://github.com/shuji-bonji/pdf-publish-skill ~/.claude/skills/pdf-publish-skill`
+
+## 構成
+
+```
+skills/pdf-publish/
+├── SKILL.md                        # 本体（Phase 0〜5・判定表・やらないこと）
+└── references/
+    ├── error-codes.md              # writer 構造化エラー（code / next_actions）の分岐表
+    ├── conformance-notes.md        # veraPDF 実測ノート + 違反 clause → 修正対応表
+    └── report-and-log.md           # Publish Report テンプレ + 実行ログ (JSONL) 仕様
+```
+
+## 関連
+
+- 上位仕様: [PDFfamily specs/07-pdf-publish-skill.md](https://github.com/shuji-bonji/Document-Note/blob/main/mcps/PDFfamily/specs/07-pdf-publish-skill.md)
+- 対になる Skill: [pdf-trust-skill](https://github.com/shuji-bonji/pdf-trust-skill)（受入監査）
+
+## ライセンス
+
+MIT © shuji-bonji
