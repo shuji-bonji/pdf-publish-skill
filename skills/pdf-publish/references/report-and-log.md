@@ -11,17 +11,24 @@
 - 品質ゲート水準: conformance (PDF/UA-1)
 - 実行した操作: create_markdown_pdf(tagged, fontPath=NotoSansJP)
     → tag_form_fields(labels: 3) → stamp_page_numbers → attach_file(Data)
+    → flatten_form: **スキップ**（前段 tag_form_fields が未実行のため。失敗ではない）
 
 ## 読み戻し（reader・観測）
 
 - テキスト抽出: OK（本文冒頭一致）
-- フォント: NotoSansJP-Regular（埋め込みサブセット）
+- 入力との照合: 識別子 12 件中 12 件残存 / 見出し 5 件・段落 9 件で入力と一致
+- 要求機能の実在: attach_file → 添付 1 件を確認 / add_bookmarks → 未実行
+- 論理順（extract_structured_text）: H1→P→H2→L — 意図どおり
+- フォント: NotoSansJP-Regular（埋め込みサブセット・isEmbedded: true）
 - 構造: H1→H2、Table、L/LI — 意図どおり
 - メタデータ: title="…" / lang="ja"
 
 ## 判定（verify）
 
-- validate_conformance pdfua-1 → **COMPLIANT (106/106)** — engine: verapdf
+- identify_conformance（**自己申告**）: PDF/UA-1 宣言あり
+- validate_conformance（**第三者採点**）pdfua-1 → **COMPLIANT (106/106)** — engine: verapdf
+- 宣言と採点の差分: **一致**（乖離があればここに明記する）
+- （編集案件）入力の採点との差分: 1 違反 → 0 違反（修復が効いた）
 - （署名済み入力を編集した場合）verify_integrity: 署名は意図どおり無効化
 
 ## warnings（writer からの事実報告・全件）
@@ -39,6 +46,10 @@
 
 - 判定行には必ず**エンジン**（verapdf / native）を書く。native の「違反なし」は
   `compliant: null` = 必要条件のみであり、COMPLIANT と書いてはならない
+- **自己申告（identify）と第三者採点（validate）を必ず並べて書く。** 片方だけでは
+  「宣言が嘘」も「実体の違反」も見逃す。両者が食い違ったら、それが所見の本体
+- **失敗とスキップを書き分ける。** 前段の失敗に巻き添えになった段は「スキップ」であり、
+  「失敗」と書くと原因の所在が読み手に伝わらない
 - warnings は writer が返したものを**全件そのまま**転記する（要約で情報を落とさない）
 - 未実施項目（reader 未接続など）は「未実施」と明記する — 黙って落とすと
   「チェック済みで問題なし」と誤読される（pdf-trust と同じ規律）
@@ -63,8 +74,12 @@ PDF 専門 LLM（family の北極星）の学習データになる。
     { "tool": "create_markdown_pdf", "args_shape": ["markdown", "title", "tagged", "lang", "fontPath", "outputPath"] },
     { "tool": "tag_form_fields", "args_shape": ["inputPath", "labels(3)", "outputPath"] }
   ],
-  "readback": { "text_ok": true, "fonts_embedded": true, "tags_ok": true },
+  "readback": { "text_ok": true, "fonts_embedded": true, "tags_ok": true,
+                "input_match": true, "features_present": ["attachment"] },
+  "declared": { "pdfa": null, "pdfua": "1" },           // identify_conformance（自己申告）
   "verdict": { "engine": "verapdf", "flavour": "pdfua-1", "compliant": true, "violations": [] },
+  "baseline": null,                                     // 編集案件は入力採点の verdict を入れる
+  "skipped": [],                                        // 前段失敗で実行しなかった段
   "loops": 1,
   "warnings_count": 2,
   "errors": []                                        // 遭遇した code の列（再試行含む）

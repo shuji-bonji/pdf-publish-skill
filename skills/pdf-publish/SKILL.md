@@ -24,9 +24,9 @@ PDF family の出力（納品）パイプラインを担う Skill。pdf-trust �
 
 | MCP | 必須/任意 | 役割 |
 |---|---|---|
-| pdf-writer-mcp (v0.8.0+) | **必須** | 生成（Tier 0）・編集（Tier A/B）・PDF/UA 修復のすべて |
-| pdf-verify-mcp | 品質ゲート案件では**必須** | validate_conformance（veraPDF 委譲）/ verify_integrity |
-| pdf-reader-mcp | 推奨 | 読み戻し（テキスト抽出・フォント・タグ・メタデータの観測） |
+| pdf-writer-mcp (v0.8.0+ / **v0.14.0+ 推奨**) | **必須** | 生成（Tier 0）・編集（Tier A/B）・PDF/UA 修復のすべて |
+| pdf-verify-mcp (**v0.7.0+ 推奨**) | 品質ゲート案件では**必須** | identify_conformance / validate_conformance（veraPDF 委譲）/ verify_integrity |
+| pdf-reader-mcp (**v0.9.1+ 推奨**) | 推奨 | 読み戻し（テキスト抽出・論理順抽出・フォント・タグ・メタデータの観測） |
 | pdf-spec-mcp | 任意 | 違反時の ISO 32000 / 14289 条項の根拠引用 |
 
 pdf-writer-mcp が未接続なら成立しない。`npx @shuji-bonji/pdf-writer-mcp@latest` の接続を
@@ -73,26 +73,85 @@ create_*（tagged はここで決める）
   → fill_form（flatten はタグ付きでは使わない）
 ```
 
+**既存 PDF の編集案件では、writer を呼ぶ前に入力を採点しておく**（`identify_conformance` +
+`validate_conformance`）。Phase 3 の差分採点の基準値になる。これが無いと
+「元から壊れていた」と「自分が壊した」を区別できない（根拠は Phase 3 の差分採点を参照）。
+
 - 各ツールの `warnings` をすべて収集する（lang 推定・グリフ置換・/TU 代用など。
   Phase 5 のレポートに全件載せる）
 - エラーが返ったら [references/error-codes.md](references/error-codes.md) の分岐に従う。
   ガード系（SIGNED_PDF / TAGGED_PDF）は**利用者に確認してから**解除フラグで再試行する
+- **前段が失敗したら、後段は「失敗」ではなく「スキップ」と記録する。** 直列化された操作は
+  前段の出力を入力に取るため、前段の失敗は後段を巻き添えにする。両者を混ぜると
+  レポートを読む人が原因を誤る（実測: 生成の失敗が署名の `ENOENT` に化け、
+  「署名も失敗」と読めるログになった）
 
 ### Phase 2 — 読み戻し（reader・水準 readback 以上）
 
 生成物に対して観測する。**合否は言わない**（それは Phase 3 の仕事）:
 
 1. `read_text` — 意図した本文が抽出できるか（writer の既知リスク: 描画と抽出は独立に壊れる）
-2. `inspect_fonts` — フォントが埋め込まれているか（conformance 水準では必須の観測）
-3. `inspect_tags` — タグ付き指定時、構造木が意図どおりか（見出し階層・表・リスト）
-4. `get_metadata` — title / lang / producer
+2. **タグ付き出力では `extract_structured_text` も呼ぶ** — 論理順（ISO 32000-2 §14.8.2.5 の
+   構造木深さ優先走査）で役割付きの本文が返る。`read_text` は座標順なので、
+   「H1 は何と書いてあるか」「読み順は意図どおりか」の照合はこちらが向く
+3. `inspect_fonts` — フォントが埋め込まれているか（conformance 水準では必須の観測）
+4. `inspect_tags` — タグ付き指定時、構造木が意図どおりか（見出し階層・表・リスト）
+5. `get_metadata` — title / lang / producer
+
+#### 入力との照合（writer の戻り値を成功の証拠にしない）
+
+**writer が正常終了しても、要求した内容が出力に入っているとは限らない。**
+読み戻したテキストを**入力と突き合わせる**こと。目視ではなく、少なくとも次を機械的に確認する:
+
+- 入力に含めた識別子・固有名詞・数値が読み戻しに残っているか
+  （実測: `create_markdown_pdf` は Markdown のインライン装飾記号を除去するため、
+  `snake_case` の `_` が消えて `identify_conformance` → `identifyconformance` になる。
+  **exit 0・warnings なし**で発生する）
+- 段落・見出しの件数が入力と一致するか（欠落・重複の検出。実測: `title` と本文の
+  先頭見出しが両方 H1 になり `H1` が 2 つになる）
+
+#### 要求した機能の実在確認
+
+「やったつもり」になれる操作は、**出力側でその痕跡を確認する**。writer の終了コードは証拠にならない:
+
+| Phase 1 で呼んだ操作 | 出力側で確認するもの |
+|---|---|
+| `attach_file` | `inspect_structure` の catalog に `Names`（EmbeddedFiles）と、PDF/A-3 なら `AF` が現れるか（実測確認済み） |
+| `add_bookmarks` | `inspect_structure` の catalog に `Outlines` が現れるか |
+| `tag_form_fields` | Phase 3 の 7.18.* 違反が消えているか |
+| `set_metadata` | `get_metadata` に反映されているか |
 
 ### Phase 3 — 品質ゲート（verify・水準 conformance）
 
-1. タグ付き出力 → `validate_conformance`（`flavour: "pdfua-1"`、engine は auto）
-2. PDF/A 宣言のある入出力 → `validate_conformance`（該当 flavour）
-3. 署名済み入力を（了解の上で）編集した場合 → `verify_integrity` で「署名が無効化された」
+1. **`identify_conformance` と `validate_conformance` を必ずペアで呼ぶ。**
+   前者は XMP の**自己申告**、後者は**第三者採点**であって、別物である。
+   両者が食い違ったら（「PDF/A-2b を宣言しているのに veraPDF で非適合」）、
+   それは**適合の刻印を押した非適合ファイルを納品しかけている**ということ。
+   差分を必ずレポートに明示する — 採点だけでは「宣言が嘘」を見逃し、
+   宣言だけでは実体を見逃す
+2. タグ付き出力 → `validate_conformance`（`flavour: "pdfua-1"`、engine は auto）
+3. PDF/A 宣言のある入出力 → `validate_conformance`（該当 flavour）
+4. **採点結果の `engine` を先に読む。** `verapdf` なら権威的結果、`native` なら
+   検査サブセットに過ぎない（`compliant: null` は「適合」ではない）。
+   native fallback だった場合、conformance 水準の判定は**保留**として扱う
+5. 署名済み入力を（了解の上で）編集した場合 → `verify_integrity` で「署名が無効化された」
    ことを**意図どおり**と確認し、レポートに明記する
+
+#### 差分採点（既存 PDF を編集した場合は必須）
+
+**単発の合否では、その違反を誰が作ったか特定できない。** Phase 1 で取った入力の基準値と
+出力の採点を突き合わせ、`入力の違反 → 出力の違反` の形でレポートする:
+
+| 差分 | 意味 |
+|---|---|
+| 違反数が増えた | **その操作が壊した。** 増えた clause を名指しで報告する |
+| 違反数が同じ | 元からの違反。編集の責任ではない（が納品可否には効く） |
+| 違反数が減った | 修復が効いている |
+
+実測で確認された増加パターン（他実装での観測だが、同型の事故は自分の writer でも起こりうる）:
+署名の増分更新が PDF/A の字句規則（`obj` / `endobj` 前後の EOL）を破る、
+ページ結合でカタログの XMP と OutputIntent が失われ DeviceRGB 違反が噴出する。
+どちらも**出力を単独で見ると「元から壊れていた」と区別がつかない**。
 
 結果の扱い:
 
@@ -118,7 +177,10 @@ create_*（tagged はここで決める）
 
 1. **Publish Report** を出力する（テンプレートは
    [references/report-and-log.md](references/report-and-log.md)）。最低限:
-   成果物パス・実行した操作列・読み戻しの観測・verify の判定（エンジンと規則数）・
+   成果物パス・実行した操作列（**スキップした段は「スキップ」と明記**）・
+   読み戻しの観測（**入力との照合結果・要求機能の実在確認を含む**）・
+   宣言（identify）と採点（validate）の**両方と、その差分**・
+   verify の判定（**エンジン名**と規則数）・**編集案件は入力採点との差分**・
    warnings 全件・ループ回数
 2. Phase 0 で合意していれば**実行ログ（JSONL 1 行）**を追記する。
    これが read-write-verify ループの学習データ（verify の verdict がラベル）になる
@@ -127,6 +189,10 @@ create_*（tagged はここで決める）
 
 - 合否の自前判定（verify の結果以外を根拠に「準拠」と言うこと）
 - verify 未接続での conformance 水準の納品
+- **writer の正常終了を「要求どおり出力された」の証拠にすること**（読み戻して確認する）
+- **`identify_conformance` を省いて `validate_conformance` だけで済ませること**
+  （宣言と実体の乖離を見逃す）
+- **編集案件で入力を採点せずに出力だけ採点すること**（壊した責任の所在が消える）
 - 利用者の了解なしの `allowBreakingSignatures` / `allowBreakingTags`
 - `outputPath` 省略での大きな PDF 生成（base64 溢れ）
 - 内容（文章そのもの）の品質保証 — このパイプラインが保証するのは構造・準拠性・
