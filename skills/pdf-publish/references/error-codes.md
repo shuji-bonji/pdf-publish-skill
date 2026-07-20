@@ -19,7 +19,7 @@ grep して推測しない。`retryable: true` でも、ガード系は利用者
 
 | code | 意味 | Skill の行動 |
 |---|---|---|
-| `SIGNED_PDF` | 署名ガード停止（/ByteRange 検知） | **利用者に「署名を無効化してよいか」を確認** → 可なら `allowBreakingSignatures: true` で再試行し、レポートに「署名は意図的に無効化」と明記。不可なら編集を断念し、署名保持の増分更新（Tier C・未実装）待ちと報告 |
+| `SIGNED_PDF` | 署名ガード停止（/ByteRange 検知） | **注釈追加なら第一候補は `preserveSignatures: true`**（v0.9.0〜。署名を保持したまま増分更新で追加。タグ無し文書のみ）。それ以外の編集は利用者に「署名を無効化してよいか」を確認 → 可なら `allowBreakingSignatures: true` で再試行し、レポートに「署名は意図的に無効化」と明記。**認証署名（DocMDP）P=1/P=2 の文書は preserveSignatures でも拒否される**（ISO 32000-2 §12.8.2.2: 注釈は P=3 のみ許可）— この場合は変更自体を断念するか破壊的編集の了解を取る |
 | `TAGGED_PDF` | タグ付き文書を壊す操作（flatten 等） | 原則**代替案を先に出す**（flatten せず対話フォームのまま納品 + tag_form_fields で準拠化）。それでも必要なら利用者確認 → `allowBreakingTags: true` + レポートに「PDF/UA 非準拠になった」と明記 |
 | `FONT_REQUIRED` | 非 Latin 文字 × フォント未指定 | `fontPath`（Noto Sans JP SubsetOTF/JP 推奨）か `PDF_WRITER_FONT` を案内して再試行 |
 | `MISSING_GLYPH` | フォント未収録文字 | 利用者に方針確認: 別フォント / `onMissingGlyph: "replace"`（〓置換）/ `"ignore"`。replace・ignore で進めた場合は warnings をレポートに転記 |
