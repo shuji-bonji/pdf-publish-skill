@@ -40,20 +40,23 @@ The loop doubles as the data factory for the family's north star (a PDF-speciali
 
 ## Pipeline
 
-1. **Requirements** — gate level (`none` / `readback` / `conformance`), fonts (`tagged` requires an embedded font), PDF/A-3 attachments, signed inputs
-2. **Write** (writer) — create → `tag_form_fields` → bookmarks/annotations → page numbers/watermarks (auto-artifacted) → attachments → form filling
-3. **Read back** (reader, observation only) — text extraction, embedded fonts, structure tree, metadata
-4. **Quality gate** (verify) — `validate_conformance` (PDF/UA-1 = 106 veraPDF rules)
-5. **Fix loop** (max 3) — violation clause → writer operation mapping
-6. **Deliver** — Publish Report stating engine, rule counts, all warnings, and human-review items
+Six stages — **requirements → write → read back → quality gate → fix loop (max 3) → deliver** — each with defined decision criteria.
+
+Three rules run through all of them:
+
+- **Only verify pronounces pass or fail.** The writer's `warnings` report facts and the reader's output is observation; neither is a verdict.
+- **A clean exit from the writer is not evidence that the output contains what you asked for.** Read the result back, diff it against the input, and confirm that requested features (attachments, bookmarks) actually exist in the output.
+- **Pair the self-declaration with the third-party score.** The gap between `identify_conformance` (the XMP claim) and `validate_conformance` (the veraPDF score) *is* the finding. When editing an existing PDF, score the input too, so "already broken" and "we broke it" stay distinguishable.
+
+> **[`skills/pdf-publish/SKILL.md`](./skills/pdf-publish/SKILL.md) is authoritative for the per-stage procedure, tool names, and branch conditions.** They are deliberately not repeated here, so the two cannot drift apart. See also [`references/conformance-notes.md`](./skills/pdf-publish/references/conformance-notes.md) (violation → writer operation mapping), [`references/error-codes.md`](./skills/pdf-publish/references/error-codes.md), and [`references/report-and-log.md`](./skills/pdf-publish/references/report-and-log.md).
 
 ## Prerequisite MCPs
 
 | MCP | Required? | Role |
 |---|---|---|
-| [@shuji-bonji/pdf-writer-mcp](https://github.com/shuji-bonji/pdf-writer-mcp) (v0.8.0+) | **Required** | create / edit / PDF/UA repair |
-| [@shuji-bonji/pdf-verify-mcp](https://github.com/shuji-bonji/pdf-verify-mcp) | **Required** for the gate | conformance verdicts via veraPDF |
-| [@shuji-bonji/pdf-reader-mcp](https://github.com/shuji-bonji/pdf-reader-mcp) | Recommended | read-back (observation) |
+| [@shuji-bonji/pdf-writer-mcp](https://github.com/shuji-bonji/pdf-writer-mcp) (v0.8.0+, **v0.14.0+ recommended**) | **Required** | create / edit / PDF/UA repair |
+| [@shuji-bonji/pdf-verify-mcp](https://github.com/shuji-bonji/pdf-verify-mcp) (**v0.7.0+ recommended**) | **Required** for the gate | declared conformance + verdicts via veraPDF |
+| [@shuji-bonji/pdf-reader-mcp](https://github.com/shuji-bonji/pdf-reader-mcp) (**v0.9.1+ recommended**) | Recommended | read-back (text, logical order, fonts, tags) |
 | [@shuji-bonji/pdf-spec-mcp](https://github.com/shuji-bonji/pdf-spec-mcp) | Optional | ISO clause citations on violations |
 
 ## Installation

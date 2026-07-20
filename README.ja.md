@@ -40,20 +40,23 @@ PDF family の設計原則は「**決定論的計算は MCP サーバ、手順�
 
 ## パイプラインの流れ
 
-1. **要件確認** — 品質ゲート水準（`none` / `readback` / `conformance`）、フォント（`tagged` は埋め込みフォント必須）、電帳法（PDF/A-3 添付）、署名済み入力の扱い
-2. **生成・編集**（writer） — create → `tag_form_fields` → しおり・注釈 → ページ番号・透かし（自動 Artifact 化）→ 添付 → フォーム記入、の順で直列化
-3. **読み戻し**（reader・観測のみ） — テキスト抽出・フォント埋め込み・構造木・メタデータ
-4. **品質ゲート**（verify） — `validate_conformance`（PDF/UA-1 は veraPDF 106 規則）
-5. **修正ループ**（上限 3 回） — 違反 clause → writer 操作の対応表で修正・再検証
-6. **納品** — Publish Report（判定エンジン・規則数・warnings 全件・人手レビュー事項を明記）
+**要件確認 → 生成・編集 → 読み戻し → 品質ゲート → 修正ループ（上限 3 回）→ 納品** の 6 段階で、各段の判断基準を定めています。
+
+貫いている規律は 3 つです。
+
+- **合否を言うのは verify だけ** — writer の `warnings` は事実の報告、reader の観測は観測であって、どちらも判定ではありません
+- **writer の正常終了を「要求どおり出力された」の証拠にしない** — 読み戻して入力と照合し、要求した機能（添付・しおり等）の実在を出力側で確認します
+- **自己申告と第三者採点をペアで見る** — `identify_conformance`（XMP の宣言）と `validate_conformance`（veraPDF 採点）の**差分**が所見の本体です。既存 PDF の編集では入力も採点し、「元から壊れていた」と「自分が壊した」を分けます
+
+> **各段の具体的な手順・ツール名・分岐条件は [`skills/pdf-publish/SKILL.md`](./skills/pdf-publish/SKILL.md) が正典です。** README には再掲しません（乖離を防ぐため）。違反 clause → writer 操作の対応表は [`references/conformance-notes.md`](./skills/pdf-publish/references/conformance-notes.md)、エラーコード分岐は [`references/error-codes.md`](./skills/pdf-publish/references/error-codes.md)、レポートとログの様式は [`references/report-and-log.md`](./skills/pdf-publish/references/report-and-log.md) にあります。
 
 ## 前提 MCP
 
 | MCP | 必須/任意 | 役割 |
 |---|---|---|
-| [@shuji-bonji/pdf-writer-mcp](https://github.com/shuji-bonji/pdf-writer-mcp) (v0.8.0+) | **必須** | 生成・編集・PDF/UA 修復 |
-| [@shuji-bonji/pdf-verify-mcp](https://github.com/shuji-bonji/pdf-verify-mcp) | 品質ゲートで**必須** | veraPDF 委譲の準拠判定 |
-| [@shuji-bonji/pdf-reader-mcp](https://github.com/shuji-bonji/pdf-reader-mcp) | 推奨 | 読み戻し（観測） |
+| [@shuji-bonji/pdf-writer-mcp](https://github.com/shuji-bonji/pdf-writer-mcp) (v0.8.0+ / **v0.14.0+ 推奨**) | **必須** | 生成・編集・PDF/UA 修復 |
+| [@shuji-bonji/pdf-verify-mcp](https://github.com/shuji-bonji/pdf-verify-mcp) (**v0.7.0+ 推奨**) | 品質ゲートで**必須** | 宣言の識別と veraPDF 委譲の準拠判定 |
+| [@shuji-bonji/pdf-reader-mcp](https://github.com/shuji-bonji/pdf-reader-mcp) (**v0.9.1+ 推奨**) | 推奨 | 読み戻し（テキスト・論理順・フォント・タグの観測） |
 | [@shuji-bonji/pdf-spec-mcp](https://github.com/shuji-bonji/pdf-spec-mcp) | 任意 | 違反時の ISO 条項引用 |
 
 ## インストール
