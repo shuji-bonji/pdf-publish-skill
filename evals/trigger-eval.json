@@ -1,0 +1,25 @@
+[
+  {"query": "月次報告書をPDF/UA準拠で作りたいです。元原稿はMarkdownで書いてあって、社内のアクセシビリティ要件があるので検証まで通した上で納品したい", "should_trigger": true},
+  {"query": "申請フォームのPDFがあるんだけど、フィールドに代替名が入ってないと指摘された。PDF/UA準拠にして出し直したい", "should_trigger": true},
+  {"query": "電帳法対応で、請求書PDFに元データのXMLを添付したPDF/A-3を作らないといけません。relationshipの指定とかよく分からないので手順から知りたい", "should_trigger": true},
+  {"query": "この議事録、pdfにして。ちゃんとしたやつでお願い。客先に出すので", "should_trigger": true},
+  {"query": "タグ付きPDFを生成したいんですが、日本語が入るのでフォント埋め込みも要ります。veraPDFで通ることまで確認してほしい", "should_trigger": true},
+  {"query": "行政に提出する報告書なので、アクセシビリティ対応が必須です。作った後に何がどう検証されたかレポートも欲しい", "should_trigger": true},
+  {"query": "既存のPDFにページ番号とウォーターマークを入れて納品したいんだけど、タグ付き文書なので壊さないようにやりたい", "should_trigger": true},
+  {"query": "Markdownで書いた技術ドキュメントをPDFにしたい。品質保証付きで、問題があれば直してから出したい", "should_trigger": true},
+  {"query": "アクセシブルなPDFって作れます？スクリーンリーダーで読める必要があるらしいんですが、何を満たせばいいのかも分かってません", "should_trigger": true},
+  {"query": "四半期のデータを表にしてPDF化して、長期保存できる形式で残しておきたい。あとで検証できる状態にしておきたいです", "should_trigger": true},
+
+  {"query": "取引先から契約書のPDFが届いたんだけど、署名欄に印影の画像が貼ってあるだけに見える。これって法的に有効な電子署名なの？", "should_trigger": false},
+  {"query": "経理から回ってきた請求書PDF、改ざんされてないか確認する方法ある？金額のところだけ違和感がある", "should_trigger": false},
+  {"query": "電帳法で7年保存する請求書が200件溜まってます。このまま置いといて後から証拠として使えるか見てほしい", "should_trigger": false},
+  {"query": "認証署名がかかってるPDFに後から注釈が足されてるっぽい。受け取った側としてどう扱うべきか判断したい", "should_trigger": false},
+  {"query": "この pdf 信用していいやつ？ 知らんとこから届いた", "should_trigger": false},
+
+  {"query": "既存のPDFの中身を読み取って、内容はそのままに構造から作り直したい。今のPDFが古いツールで作られててリフローできないので", "should_trigger": false},
+  {"query": "このPDFをスマホでも読めるようにリフロー対応にしたいんだけど、中のテキストを抜いて組み直すしかないよね？", "should_trigger": false},
+
+  {"query": "スキャンした資料のPDFからテキストだけ抜き出してMarkdownにしたい。OCRはかかってるはず", "should_trigger": false},
+  {"query": "このPDF何ページあるか教えて。あと最初のページに何が書いてあるかも", "should_trigger": false},
+  {"query": "PowerPointで作ったスライドをPDFにエクスポートしたいだけなんだけど、一番手っ取り早い方法は？", "should_trigger": false}
+]
