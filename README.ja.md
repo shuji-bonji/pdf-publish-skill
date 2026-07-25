@@ -18,7 +18,7 @@
 ```mermaid
 graph LR
   subgraph skill["pdf-publish Skill (このリポジトリ)"]
-    S1["品質ゲート水準<br/>none / readback / conformance"]
+    S1["品質ゲート水準<br/>none / readback / conformance(flavour)"]
     S2["修正ループ<br/>違反 clause → writer 操作対応表"]
     S3["Publish Report<br/>+ 実行ログ (JSONL)"]
   end
@@ -42,11 +42,12 @@ PDF family の設計原則は「**決定論的計算は MCP サーバ、手順�
 
 **要件確認 → 生成・編集 → 読み戻し → 品質ゲート → 修正ループ（上限 3 回）→ 納品** の 6 段階で、各段の判断基準を定めています。
 
-貫いている規律は 3 つです。
+貫いている規律は 4 つです。
 
 - **合否を言うのは verify だけ** — writer の `warnings` は事実の報告、reader の観測は観測であって、どちらも判定ではありません
 - **writer の正常終了を「要求どおり出力された」の証拠にしない** — 読み戻して入力と照合し、要求した機能（添付・しおり等）の実在を出力側で確認します
 - **自己申告と第三者採点をペアで見る** — `identify_conformance`（XMP の宣言）と `validate_conformance`（veraPDF 採点）の**差分**が所見の本体です。既存 PDF の編集では入力も採点し、「元から壊れていた」と「自分が壊した」を分けます
+- **「宣言」と「適合」を混同しない** — `ensure_pdfa` / `ensure_tagged` は XMP に `pdfaid` / `pdfuaid` を書く道具で、文書に「規格に沿っています」と**名乗らせる**だけです。適合させはしません。宣言を書いたら必ず対応する flavour を verify で測ります（測れないなら宣言も書きません）。**自分で宣言を書いた後の `identify_conformance` は合格の根拠になりません**
 
 > **各段の具体的な手順・ツール名・分岐条件は [`skills/pdf-publish/SKILL.md`](./skills/pdf-publish/SKILL.md) が正典です。** README には再掲しません（乖離を防ぐため）。違反 clause → writer 操作の対応表は [`references/conformance-notes.md`](./skills/pdf-publish/references/conformance-notes.md)、エラーコード分岐は [`references/error-codes.md`](./skills/pdf-publish/references/error-codes.md)、レポートとログの様式は [`references/report-and-log.md`](./skills/pdf-publish/references/report-and-log.md) にあります。
 
@@ -54,10 +55,10 @@ PDF family の設計原則は「**決定論的計算は MCP サーバ、手順�
 
 | MCP | 必須/任意 | 役割 |
 |---|---|---|
-| [@shuji-bonji/pdf-writer-mcp](https://github.com/shuji-bonji/pdf-writer-mcp) (v0.8.0+ / **v0.14.0+ 推奨**) | **必須** | 生成・編集・PDF/UA 修復 |
+| [@shuji-bonji/pdf-writer-mcp](https://github.com/shuji-bonji/pdf-writer-mcp) (v0.8.0+ / **v0.15.0+ 推奨**) | **必須** | 生成・編集・PDF/UA 修復。**PDF/A-3b の器付け（`ensure_pdfa`）は v0.15.0 から** |
 | [@shuji-bonji/pdf-verify-mcp](https://github.com/shuji-bonji/pdf-verify-mcp) (**v0.7.0+ 推奨**) | 品質ゲートで**必須** | 宣言の識別と veraPDF 委譲の準拠判定 |
 | [@shuji-bonji/pdf-reader-mcp](https://github.com/shuji-bonji/pdf-reader-mcp) (**v0.9.1+ 推奨**) | 推奨 | 読み戻し（テキスト・論理順・フォント・タグの観測） |
-| [@shuji-bonji/pdf-spec-mcp](https://github.com/shuji-bonji/pdf-spec-mcp) | 任意 | 違反時の ISO 条項引用 |
+| [@shuji-bonji/pdf-spec-mcp](https://github.com/shuji-bonji/pdf-spec-mcp) | 任意 | 違反時の ISO 条項引用。**ISO 19005（PDF/A）は収録外**なので PDF/A の条文は引けない |
 
 ## インストール
 

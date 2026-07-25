@@ -1,7 +1,11 @@
-# PDF/UA 準拠の実測ノートと違反→修正対応表
+# 準拠の実測ノートと違反→修正対応表（PDF/UA-1 + PDF/A-3b）
 
-すべて veraPDF（`--flavour ua1`、106 規則）での実測に基づく。
+すべて veraPDF での実測に基づく（**PDF/UA-1** = `--flavour ua1`・106 規則 /
+**PDF/A-3b** = `--flavour 3b`・146 規則）。
 判定は必ず pdf-verify-mcp の `validate_conformance` で取ること。
+
+> **PDF/UA-1（ISO 14289-1）は T1** = 条文を引ける。**PDF/A（ISO 19005）は T2** = 条文が家に無く、
+> 言えるのは「veraPDF はこう判定した」まで。**同じ文書の中で書き方が変わる**ことに注意。
 
 ## 違反 clause → writer 操作の対応表（Phase 4 修正ループ用）
 
@@ -18,6 +22,27 @@
 
 **writer の能力外**（人手レビュー・Tier C 待ち）: 既存タグ木の再構成、読み順の修正、
 本文コンテンツの再タグ付け、画像への /Alt 後付け（B-4 実装まで）。
+
+### PDF/A-3b（`pdfa-3b`）の違反 → writer 操作
+
+> **ルール ID は veraPDF のもので、ISO 19005-3 の条文は引けない（T2）。**
+> 「是正の仕方」だけは ISO 32000-1 を引いて示せる場合がある（下表の「条文（T1）」列）。
+
+| veraPDF の違反 | 原因 | writer での修正 | 条文（T1） |
+|---|---|---|---|
+| `6.1.3-1`（trailer に /ID 無し） | create 系は /ID を書かない | **`ensure_pdfa`** | 値の作り方は ISO 32000-1 §14.4。ただし §14.4 は "optional but should"、Table 15（§7.5.5）も「`Encrypt` があれば Required、なければ optional」— **非暗号化文書で無条件に必須にしているのは PDF/A 側（T2）** |
+| `6.2.4.3-2`（DeviceRGB に DefaultRGB も OutputIntent も無い） | 色空間が device-dependent のまま | **`ensure_pdfa`**（sRGB の OutputIntent を catalog に追加。ICC を生成して埋め込む） | OutputIntent 辞書は ISO 32000-1 Table 365 / §14.11.5 |
+| `6.6.4-1`（PDF/A Identification が無い） | XMP に pdfaid が無い | **`ensure_pdfa`** | — |
+| フォント非埋め込み | 標準フォント（Helvetica）使用 | `fontPath` を指定して**再生成**（`ensure_pdfa` では直らない） | ISO 32000-1 §9.9 |
+| 暗号化されている | 入力が暗号化 PDF | writer は復号を持たない。復号済みファイルを用意する | — |
+
+**`ensure_pdfa` で直るのは上 3 件だけ。** フォント・暗号化・JavaScript・LZW は直らないので、
+**`ensure_pdfa` を掛けても COMPLIANT にならないケースは普通にある**（実測で通ったのは
+writer 自身が作った PDF だったから = フォント埋め込み済み・暗号化なし）。
+
+**実測（2026-07-25）**: 電帳法検体（請求書 + CSV 添付）に `attach_file` → `ensure_pdfa` を
+掛けて **143/146 → 146/146 COMPLIANT**、同時に `pdfua-1` も **106/106 を維持**、
+添付（`/AF` + `/EmbeddedFiles`）も生存。
 
 ## 実測で判明している落とし穴
 
@@ -64,3 +89,7 @@
 - Artifact 系（watermark / stamp）は本文構造に影響しないため順序自由だが、
   `flatten` だけは他のすべての後（そもそもタグ付きでは使わない）
 - `attach_file` は catalog 操作のみで構造木に触れない — いつでも安全
+- **`ensure_pdfa` は必ず最後**（PDF/A-3b 要件のときだけ使う）。とくに **`attach_file` の後**:
+  - 正順（`attach_file` → `ensure_pdfa`）は**実測済み** — 添付が生き残り 146/146 COMPLIANT
+  - **逆順は未検証**。後から `/AF` が増えると `AFRelationship` が `Unspecified` のままになりうる
+  - `ensure_pdfa` の後に本文・構造を変える操作を足したら、**PDF/A の採点はやり直し**

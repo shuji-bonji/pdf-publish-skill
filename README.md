@@ -18,7 +18,7 @@ This repository is a **Skill, not an MCP server**: a Markdown playbook telling C
 ```mermaid
 graph LR
   subgraph skill["pdf-publish Skill (this repo)"]
-    S1["Quality-gate levels<br/>none / readback / conformance"]
+    S1["Quality-gate levels<br/>none / readback / conformance(flavour)"]
     S2["Fix loop<br/>violation clause → writer operation"]
     S3["Publish Report<br/>+ run log (JSONL)"]
   end
@@ -42,11 +42,12 @@ The loop doubles as the data factory for the family's north star (a PDF-speciali
 
 Six stages — **requirements → write → read back → quality gate → fix loop (max 3) → deliver** — each with defined decision criteria.
 
-Three rules run through all of them:
+Four rules run through all of them:
 
 - **Only verify pronounces pass or fail.** The writer's `warnings` report facts and the reader's output is observation; neither is a verdict.
 - **A clean exit from the writer is not evidence that the output contains what you asked for.** Read the result back, diff it against the input, and confirm that requested features (attachments, bookmarks) actually exist in the output.
 - **Pair the self-declaration with the third-party score.** The gap between `identify_conformance` (the XMP claim) and `validate_conformance` (the veraPDF score) *is* the finding. When editing an existing PDF, score the input too, so "already broken" and "we broke it" stay distinguishable.
+- **Never confuse a claim with conformance.** `ensure_pdfa` and `ensure_tagged` write `pdfaid` / `pdfuaid` into the XMP — they make a file *say* it follows a standard; they do not make it conform. Write a claim and you must measure the matching flavour with verify. If you cannot measure it, do not write the claim. (Corollary: `identify_conformance` is no evidence of a pass once you wrote the claim yourself.)
 
 > **[`skills/pdf-publish/SKILL.md`](./skills/pdf-publish/SKILL.md) is authoritative for the per-stage procedure, tool names, and branch conditions.** They are deliberately not repeated here, so the two cannot drift apart. See also [`references/conformance-notes.md`](./skills/pdf-publish/references/conformance-notes.md) (violation → writer operation mapping), [`references/error-codes.md`](./skills/pdf-publish/references/error-codes.md), and [`references/report-and-log.md`](./skills/pdf-publish/references/report-and-log.md).
 
@@ -54,10 +55,10 @@ Three rules run through all of them:
 
 | MCP | Required? | Role |
 |---|---|---|
-| [@shuji-bonji/pdf-writer-mcp](https://github.com/shuji-bonji/pdf-writer-mcp) (v0.8.0+, **v0.14.0+ recommended**) | **Required** | create / edit / PDF/UA repair |
+| [@shuji-bonji/pdf-writer-mcp](https://github.com/shuji-bonji/pdf-writer-mcp) (v0.8.0+, **v0.14.0+ recommended**) | **Required** | create / edit / PDF/UA repair. **PDF/A-3b scaffolding (`ensure_pdfa`) landed in v0.15.0** |
 | [@shuji-bonji/pdf-verify-mcp](https://github.com/shuji-bonji/pdf-verify-mcp) (**v0.7.0+ recommended**) | **Required** for the gate | declared conformance + verdicts via veraPDF |
 | [@shuji-bonji/pdf-reader-mcp](https://github.com/shuji-bonji/pdf-reader-mcp) (**v0.9.1+ recommended**) | Recommended | read-back (text, logical order, fonts, tags) |
-| [@shuji-bonji/pdf-spec-mcp](https://github.com/shuji-bonji/pdf-spec-mcp) | Optional | ISO clause citations on violations |
+| [@shuji-bonji/pdf-spec-mcp](https://github.com/shuji-bonji/pdf-spec-mcp) | Optional | ISO clause citations on violations. **ISO 19005 (PDF/A) is outside its corpus**, so PDF/A clauses cannot be quoted |
 
 ## Installation
 

@@ -42,6 +42,33 @@
 - ループ回数: 1（初回で通過）
 ```
 
+### 複数 flavour を測った場合（PDF/A も要る = 電帳法系・UC-4）
+
+**flavour ごとに 1 行ずつ書く。**「両方通った」と丸めない — 後から「どちらを測ったのか」が
+分からなくなる。**PDF/A の行には判定者（veraPDF）を明記する**（T2 = ISO 19005 の条文は引けない）。
+
+```markdown
+- 実行した操作: create_markdown_pdf(tagged) → attach_file(Data) → **ensure_pdfa**
+
+## 判定（verify）
+
+- identify_conformance（自己申告）: PDF/UA-1 と PDF/A-3b の両方を宣言
+  ※ PDF/A-3b の宣言は **ensure_pdfa がこの工程で書いたもの**。自称の一致は合格の根拠にならない
+- validate_conformance pdfua-1 → **COMPLIANT (106/106)** — engine: verapdf
+  （ISO 14289-1 は T1 = 条文を引けるので「PDF/UA-1 準拠」と書ける）
+- validate_conformance pdfa-3b → **veraPDF が COMPLIANT と判定 (146/146)** — engine: verapdf
+  ※ PDF/A は **T2** — ISO 19005 の条文を引けないため「ISO 19005-3 準拠」とは書かない
+
+## warnings（全件）
+
+- ensure_pdfa: この PDF は PDF/A-3b を**自称する**が、ツール自体は適合を検査していない
+  （→ 上の validate_conformance pdfa-3b で検査済み・COMPLIANT）
+```
+
+**`ensure_pdfa` の warnings を「検証で通ったから」と省略しないこと。**
+「自称を書いた」→「別の道具で検査した」という **2 段があったこと自体がレポートの価値**である。
+省くと、読み手には「最初から適合していた」ように見えてしまう。
+
 書き方の規律:
 
 - 判定行には必ず**エンジン**（verapdf / native）を書く。native の「違反なし」は
