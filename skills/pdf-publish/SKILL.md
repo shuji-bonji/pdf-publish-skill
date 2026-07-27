@@ -1,6 +1,6 @@
 ---
 name: pdf-publish
-description: PDF の生成・編集から納品までを品質ゲート付きで編成する出力パイプライン。pdf-writer-mcp で書き、pdf-reader-mcp で読み戻し、pdf-verify-mcp で機械採点（veraPDF）する write → read-back → verify ループを回し、Publish Report 付きで納品する。ユーザーが「PDF にして納品」「PDF/UA で作って」「アクセシブルな PDF」「タグ付き PDF の生成」「電帳法対応の PDF（PDF/A-3 添付）」「品質保証付きで PDF を作って」「PDF を作って検証まで」「フォームを PDF/UA 準拠に」などに言及したら、単発の writer ツール呼び出しで済ませず必ずこの Skill を使う。pdf-trust（受入監査）の対になる送り出し側。
+description: PDF の生成・編集から納品までを品質ゲート付きで編成する出力パイプライン。pdf-writer-mcp で書き、pdf-reader-mcp で読み戻し、pdf-verify-mcp で機械採点（veraPDF）する write → read-back → verify ループを回し、Publish Report 付きで納品する。ユーザーが「PDF にして納品」「PDF/UA で作って」「アクセシブルな PDF」「タグ付き PDF の生成」「電帳法対応の PDF（PDF/A-3 添付）」「PDF/A-4 で作って」「品質保証付きで PDF を作って」「PDF を作って検証まで」「フォームを PDF/UA 準拠に」などに言及したら、単発の writer ツール呼び出しで済ませず必ずこの Skill を使う。pdf-trust（受入監査）の対になる送り出し側。
 ---
 
 # pdf-publish — 品質ゲート付き PDF 出力パイプライン
@@ -28,7 +28,7 @@ PDF family の出力（納品）パイプラインを担う Skill。pdf-trust �
 
 | MCP | 必須/任意 | 役割 |
 |---|---|---|
-| pdf-writer-mcp (v0.8.0+ / **v0.15.0+ 推奨**) | **必須** | 生成（Tier 0）・編集（Tier A/B）・PDF/UA 修復のすべて。**PDF/A-3b の器付け（`ensure_pdfa`）は v0.15.0 から** |
+| pdf-writer-mcp (v0.8.0+ / **v0.16.0+ 推奨**) | **必須** | 生成（Tier 0）・編集（Tier A/B）・PDF/UA 修復のすべて。**PDF/A-3b の器付け（`ensure_pdfa`）は v0.15.0 から・PDF/A-4 / -4f と PDF 2.0 出力は v0.16.0 から** |
 | pdf-verify-mcp (**v0.7.0+ 推奨**) | 品質ゲート案件では**必須** | identify_conformance / validate_conformance（veraPDF 委譲）/ verify_integrity |
 | pdf-reader-mcp (**v0.9.1+ 推奨**) | 推奨 | 読み戻し（テキスト抽出・論理順抽出・フォント・タグ・メタデータの観測） |
 | pdf-spec-mcp | 任意 | 違反時の ISO 32000 / 14289 条項の根拠引用。**ISO 19005（PDF/A）は収録外**なので PDF/A の条文は引けない（T2） |
@@ -63,23 +63,37 @@ pdf-writer-mcp が未接続なら成立しない。`npx @shuji-bonji/pdf-writer-
    |---|---|
    | `tagged`（アクセシビリティ） | `pdfua-1` |
    | PDF/A-3 添付（電帳法・長期保存） | `pdfa-3b` |
-   | 両方 | **`pdfua-1` と `pdfa-3b` の両方**を測る |
+   | **PDF/A-4（PDF 2.0 基盤の長期保存）・添付なし** | **`pdfa-4`** |
+   | **PDF/A-4 で添付あり（電帳法の CSV/JSON 同梱）** | **`pdfa-4f`** |
+   | 両方 | **`pdfua-1` と PDF/A 側の両方**を測る |
 
    PDF/A-3 と PDF/UA-1 はどちらも ISO 32000-1 基盤なので同時に宣言でき、実測で両立を確認済み
    （同一ファイルで 146/146 と 106/106）。ただし**「片方が通ったから他方も大丈夫」とは言えない**
    ので、**宣言した flavour はすべて測る**。
 
-   **`pdfa-4` は現状取れない**（verify が受け付けない）。要求されたらここで
-   「PDF/A-4 は不可。-3b で足りるか」を確認する。
+   **PDF/A-4 は writer v0.16.0 / verify v0.11.0 から取れる**（実測: `pdfa-4` / `pdfa-4f` とも
+   veraPDF **109/109 COMPLIANT**）。選ぶときの判断は 2 つだけ:
+
+   - **添付があるなら必ず `pdfa-4f`。** 素の `pdfa-4` は**添付ファイル自身が PDF/A であること**を
+     要求する（veraPDF `ISO 19005-4:2020 6.9-3`）ので、CSV や JSON を同梱した瞬間に非適合になる。
+     **電帳法の使い方は事実上つねに `-4f`**
+   - **PDF/A-4 と PDF/UA は同時に測れない。** writer が書けるのは PDF/UA-1（PDF 1.7 基盤）だけで、
+     PDF 2.0 の器に載せると測れない宣言になるため、`tagged` × PDF 2.0 は writer が拒否する。
+     **アクセシビリティと PDF/A-4 の両方を求められたら、ここで「-3b + PDF/UA-1」に倒すか
+     利用者に選ばせる**（黙ってどちらかを落とさない）
+
+   **-3b と -4 のどちらを勧めるか**: 実需が「電帳法の器」なら **-3b で足りている**（UC-4 は
+   -3b で充足済み）。-4 を選ぶのは「PDF 2.0 基盤で残したい」「-4 を指定された」ときに限る。
 
 3. **日本語の有無** → 含むなら `fontPath` / 環境変数 `PDF_WRITER_FONT` の確認。
    **`tagged: true` なら日本語が無くても埋め込みフォントが必須**（標準 Helvetica は
    PDF/UA-1 7.21.4.1 で必ず違反 — veraPDF 実測）。`title` も必須（7.1）
-4. **電帳法・PDF/A-3 文脈か** → attach_file の `relationship`（Data / Source）を確認し、
-   水準は項目 2 の **`pdfa-3b`** を選ぶ。
-   **`ensure_pdfa` は writer v0.15.0 から**。それ以前を掴んでいる環境では PDF/A-3b の
-   器付けができないので、Phase 1 に進む前に利用者へ伝え、(a) 添付付き PDF
-   （PDF/A は名乗らない）で合意する / (b) writer を更新する のどちらかを選ばせる。
+4. **電帳法・PDF/A 文脈か** → attach_file の `relationship`（Data / Source）を確認し、
+   水準は項目 2 の **`pdfa-3b`**（または `pdfa-4f`）を選ぶ。
+   **`ensure_pdfa` は writer v0.15.0 から・`flavour`（-4 / -4f）は v0.16.0 から**。
+   それ以前を掴んでいる環境では器付けができない / -4 を選べないので、Phase 1 に進む前に
+   利用者へ伝え、(a) 添付付き PDF（PDF/A は名乗らない）で合意する / (b) -3b に倒す /
+   (c) writer を更新する のいずれかを選ばせる。
    **「無いツールを呼んで失敗してから気づく」を避ける**
 5. **入力が署名済みか** → 編集すると署名は必ず無効化される。利用者の明示了解を得てから
    `allowBreakingSignatures: true` を付ける（勝手に付けない）
@@ -99,7 +113,7 @@ create_*（tagged はここで決める）
   → stamp_page_numbers / add_watermark（タグ付きでは自動で Artifact 化される）
   → attach_file（relationship を明示）
   → fill_form（flatten はタグ付きでは使わない）
-  → ensure_pdfa（PDF/A-3b 要件のときだけ。**必ず最後**）
+  → ensure_pdfa（PDF/A 要件のときだけ。flavour = -3b / -4 / -4f。**必ず最後**）
 ```
 
 **`ensure_pdfa` は必ず最後に置く。** とくに **`attach_file` → `ensure_pdfa`** の順を守る:
@@ -179,12 +193,12 @@ create_*（tagged はここで決める）
 
 **`ensure_pdfa` と `ensure_tagged` は「宣言」を書く道具で、「適合」は作らない。**
 
-- **`ensure_pdfa` を呼んだら `validate_conformance(flavour: "pdfa-3b")` は必須。**
+- **`ensure_pdfa` を呼んだら `validate_conformance` は必須**（flavour は `ensure_pdfa` に渡したものと同じ文字列）。
   この 2 つは**不可分**。`ensure_pdfa` 単発で Phase 5 に進んではいけない。
   **水準が `none` / `readback` でも、`ensure_pdfa` を使ったなら PDF/A の検証だけは通す** —
   さもなくば「PDF/A-3b と名乗るが誰も検査していないファイル」を納品することになる
 - 同じ理由で **`ensure_tagged` を呼んだら `pdfua-1` を測る**
-- **`ensure_pdfa` は必ず warnings を返す**（「CLAIMS PDF/A-3b … conformance was NOT checked」）。
+- **`ensure_pdfa` は必ず warnings を返す**（「CLAIMS PDF/A-3b … conformance was NOT checked」。-4 なら「CLAIMS PDF/A-4」）。
   これは異常ではなく設計。**レポートに転記する**。warnings が無ければ writer 側の欠陥を疑う
 
 > **⚠️ 上の 1.（`identify_conformance` とのペア呼び出し）は、自分で `ensure_pdfa` を掛けた
@@ -249,6 +263,7 @@ create_*（tagged はここで決める）
 | 書いてよい | 書いてはいけない |
 |---|---|
 | 「**veraPDF が** PDF/A-3b **COMPLIANT と判定**（146/146）」 | 「ISO 19005-3 **準拠**」 |
+| 「**veraPDF が** PDF/A-4f **COMPLIANT と判定**（109/109）」 | 「ISO 19005-4 **準拠**」 |
 | 「veraPDF の指摘: `6.1.3-1` /ID 欠落」 | 「ISO 19005-3 §6.1.3 **に違反**」（条文を確認していない） |
 | 「PDF/UA-1 7.1 が文書タイトルを要求する（条文）」 | — （PDF/UA は T1 なので断定してよい） |
 

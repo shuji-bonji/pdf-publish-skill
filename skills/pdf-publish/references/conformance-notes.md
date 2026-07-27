@@ -1,7 +1,8 @@
-# 準拠の実測ノートと違反→修正対応表（PDF/UA-1 + PDF/A-3b）
+# 準拠の実測ノートと違反→修正対応表（PDF/UA-1 + PDF/A-3b + PDF/A-4）
 
 すべて veraPDF での実測に基づく（**PDF/UA-1** = `--flavour ua1`・106 規則 /
-**PDF/A-3b** = `--flavour 3b`・146 規則）。
+**PDF/A-3b** = `--flavour 3b`・146 規則 / **PDF/A-4** = `--flavour 4`・**109 規則**、
+**PDF/A-4f** = `--flavour 4f`・109 規則）。
 判定は必ず pdf-verify-mcp の `validate_conformance` で取ること。
 
 > **PDF/UA-1（ISO 14289-1）は T1** = 条文を引ける。**PDF/A（ISO 19005）は T2** = 条文が家に無く、
@@ -43,6 +44,34 @@ writer 自身が作った PDF だったから = フォント埋め込み済み�
 **実測（2026-07-25）**: 電帳法検体（請求書 + CSV 添付）に `attach_file` → `ensure_pdfa` を
 掛けて **143/146 → 146/146 COMPLIANT**、同時に `pdfua-1` も **106/106 を維持**、
 添付（`/AF` + `/EmbeddedFiles`）も生存。
+
+### PDF/A-4（`pdfa-4` / `pdfa-4f`）の違反 → writer 操作
+
+> **-3b と要求が違う。番号を差し替えただけでは通らない。** -4 は PDF 2.0 基盤なので、
+> **入力を `pdfVersion: "2.0"` で作っておく**のが前提（1.7 の文書に後から掛けると
+> `ensure_pdfa` がヘッダを上げるが、署名済みなら上げられないので拒否される）。
+
+| veraPDF の違反 | 意味 | writer での修正 |
+|---|---|---|
+| `6.1.2-1` | ヘッダが `%PDF-2.n` でない | `create_*` の **`pdfVersion: "2.0"`**（`ensure_pdfa(flavour: "pdfa-4")` も上げる） |
+| `6.1.3-1` | trailer に `/ID` 無し | `ensure_pdfa` |
+| `6.1.3-4` / `6.1.3-5` | **Info 辞書が存在する**（`/PieceInfo` が無い限り置けない。置くなら `ModDate` だけ） | `ensure_pdfa`（Info を削除する） |
+| `6.2.4.3-2` | DeviceRGB に OutputIntent が無い | `ensure_pdfa` |
+| `6.7.3-1` / `6.7.3-5` | pdfaid が無い / `pdfaid:rev` が `2020` でない | `ensure_pdfa` |
+| `6.7.3-3` | `pdfaid:conformance` が `F` でない（-4f を名乗るのに） | `ensure_pdfa(flavour: "pdfa-4f")` |
+| **`6.9-3`** | **添付ファイル自身が PDF/A でない** | **`flavour` を `pdfa-4f` に変える**（添付を消すのではない） |
+
+**`6.9-3` が -4 でいちばん引っかかる。** 素の `pdfa-4` は添付が PDF/A であることを要求するので、
+**CSV / JSON を同梱した瞬間に非適合**になる。電帳法の使い方は事実上つねに `-4f`。
+実測: 同一文書が `pdfa-4` で **108/109**、`pdfa-4f` で **109/109 COMPLIANT**。
+
+**Info の扱いが -3b と決定的に違う。** ISO 32000-2 §14.3.3 は Info に `CreationDate` と
+`ModDate` を残してよいとするが、**-4 は Info そのものを許さない**。作成日時は
+`xmp:CreateDate` が持つので情報は失われない。`get_metadata` で読み戻すと Info 由来の
+題名・作成者が消えて見えるが、**それは正しい状態**（XMP を見ること）。
+
+**実測（2026-07-27）**: PDF 2.0 で生成 → `attach_file`（CSV）→ `ensure_pdfa(flavour: "pdfa-4f")`
+→ **109/109 COMPLIANT**、`/AF` と添付は qpdf 読み戻しで生存。
 
 ## 実測で判明している落とし穴
 
@@ -89,7 +118,7 @@ writer 自身が作った PDF だったから = フォント埋め込み済み�
 - Artifact 系（watermark / stamp）は本文構造に影響しないため順序自由だが、
   `flatten` だけは他のすべての後（そもそもタグ付きでは使わない）
 - `attach_file` は catalog 操作のみで構造木に触れない — いつでも安全
-- **`ensure_pdfa` は必ず最後**（PDF/A-3b 要件のときだけ使う）。とくに **`attach_file` の後**:
+- **`ensure_pdfa` は必ず最後**（PDF/A 要件のときだけ使う。flavour = -3b / -4 / -4f）。とくに **`attach_file` の後**:
   - 正順（`attach_file` → `ensure_pdfa`）は**実測済み** — 添付が生き残り 146/146 COMPLIANT
   - **逆順は未検証**。後から `/AF` が増えると `AFRelationship` が `Unspecified` のままになりうる
   - `ensure_pdfa` の後に本文・構造を変える操作を足したら、**PDF/A の採点はやり直し**
