@@ -60,6 +60,9 @@ PDF family の設計原則は「**決定論的計算は MCP サーバ、手順�
 | [@shuji-bonji/pdf-reader-mcp](https://github.com/shuji-bonji/pdf-reader-mcp) (**v0.9.1+ 推奨**) | 推奨 | 読み戻し（テキスト・論理順・フォント・タグの観測） |
 | [@shuji-bonji/pdf-spec-mcp](https://github.com/shuji-bonji/pdf-spec-mcp) | 任意 | 違反時の ISO 条項引用。**ISO 19005（PDF/A）は収録外**なので PDF/A の条文は引けない |
 
+`pdf-writer-mcp` は plugin の `dependencies` で宣言しているので、この Skill を install すると
+**自動で一緒に入る**（Claude Code v2.1.110 以上）。
+
 ## インストール
 
 - **Claude Code**: `/plugin marketplace add shuji-bonji/claude-plugins` → `/plugin install pdf-publish@shuji-bonji`

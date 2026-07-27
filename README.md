@@ -60,6 +60,9 @@ Four rules run through all of them:
 | [@shuji-bonji/pdf-reader-mcp](https://github.com/shuji-bonji/pdf-reader-mcp) (**v0.9.1+ recommended**) | Recommended | read-back (text, logical order, fonts, tags) |
 | [@shuji-bonji/pdf-spec-mcp](https://github.com/shuji-bonji/pdf-spec-mcp) | Optional | ISO clause citations on violations. **ISO 19005 (PDF/A) is outside its corpus**, so PDF/A clauses cannot be quoted |
 
+`pdf-writer-mcp` is declared in this plugin's `dependencies`, so installing the Skill installs it
+too (Claude Code v2.1.110 or later).
+
 ## Installation
 
 - **Claude Code**: `/plugin marketplace add shuji-bonji/claude-plugins` → `/plugin install pdf-publish@shuji-bonji`
