@@ -55,7 +55,7 @@ PDF family の設計原則は「**決定論的計算は MCP サーバ、手順�
 
 | MCP | 必須/任意 | 役割 |
 |---|---|---|
-| [@shuji-bonji/pdf-writer-mcp](https://github.com/shuji-bonji/pdf-writer-mcp) (v0.8.0+ / **v0.16.0+ 推奨**) | **必須** | 生成・編集・PDF/UA 修復。**PDF/A-3b の器付け（`ensure_pdfa`）は v0.15.0 から・PDF/A-4 / -4f と PDF 2.0 出力は v0.16.0 から** |
+| [@shuji-bonji/pdf-writer-mcp](https://github.com/shuji-bonji/pdf-writer-mcp) (v0.8.0+ / **v0.17.0+ 推奨**) | **必須** | 生成・編集・PDF/UA 修復。**PDF/A-3b の器付け（`ensure_pdfa`）は v0.15.0 から・PDF/A-4 / -4f と PDF 2.0 出力は v0.16.0 から・`declarationRisks`（測ると落ちると分かっている宣言）は v0.17.0 から** |
 | [@shuji-bonji/pdf-verify-mcp](https://github.com/shuji-bonji/pdf-verify-mcp) (**v0.7.0+ 推奨**) | 品質ゲートで**必須** | 宣言の識別と veraPDF 委譲の準拠判定 |
 | [@shuji-bonji/pdf-reader-mcp](https://github.com/shuji-bonji/pdf-reader-mcp) (**v0.9.1+ 推奨**) | 推奨 | 読み戻し（テキスト・論理順・フォント・タグの観測） |
 | [@shuji-bonji/pdf-spec-mcp](https://github.com/shuji-bonji/pdf-spec-mcp) | 任意 | 違反時の ISO 条項引用。**ISO 19005（PDF/A）は収録外**なので PDF/A の条文は引けない |

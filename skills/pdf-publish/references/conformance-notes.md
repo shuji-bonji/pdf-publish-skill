@@ -41,6 +41,14 @@
 **`ensure_pdfa` を掛けても COMPLIANT にならないケースは普通にある**（実測で通ったのは
 writer 自身が作った PDF だったから = フォント埋め込み済み・暗号化なし）。
 
+> **writer v0.17.0 からは、その一部を検証の前に知らせてくれる。**
+> `ensure_pdfa` の結果に `declarationRisks` があれば、**書いた宣言は測ると落ちると
+> 既に分かっている**。現状の唯一のコードは `FONT_NOT_EMBEDDED`（`affected` に該当フォント名）。
+> **これは veraPDF を回す前に出るので、無駄な検証を 1 往復省ける**うえ、
+> Publish Report に「なぜ落ちたか」を writer 由来の事実として書ける。
+> ⚠️ **`declarationRisks` が空でも適合の証拠にはならない** — writer が観測できる不適合は
+> フォント埋め込みだけで、暗号化・JavaScript・LZW は依然として検証でしか分からない。
+
 **実測（2026-07-25）**: 電帳法検体（請求書 + CSV 添付）に `attach_file` → `ensure_pdfa` を
 掛けて **143/146 → 146/146 COMPLIANT**、同時に `pdfua-1` も **106/106 を維持**、
 添付（`/AF` + `/EmbeddedFiles`）も生存。
