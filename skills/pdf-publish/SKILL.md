@@ -29,7 +29,7 @@ PDF family の出力（納品）パイプラインを担う Skill。pdf-trust �
 | MCP | 必須/任意 | 役割 |
 |---|---|---|
 | pdf-writer-mcp (v0.8.0+ / **v0.16.0+ 推奨**) | **必須** | 生成（Tier 0）・編集（Tier A/B）・PDF/UA 修復のすべて。**PDF/A-3b の器付け（`ensure_pdfa`）は v0.15.0 から・PDF/A-4 / -4f と PDF 2.0 出力は v0.16.0 から** |
-| pdf-verify-mcp (**v0.7.0+ 推奨**) | 品質ゲート案件では**必須** | identify_conformance / validate_conformance（veraPDF 委譲）/ verify_integrity |
+| pdf-verify-mcp (**v0.20.0+ 推奨**) | 品質ゲート案件では**必須** | identify_conformance / validate_conformance（veraPDF 委譲）/ verify_integrity。v0.20.0 から報告の先頭に `scope`（判定の射程）が入る |
 | pdf-reader-mcp (**v0.9.1+ 推奨**) | 推奨 | 読み戻し（テキスト抽出・論理順抽出・フォント・タグ・メタデータの観測） |
 | pdf-spec-mcp | 任意 | 違反時の ISO 32000 / 14289 条項の根拠引用。**ISO 19005（PDF/A）は収録外**なので PDF/A の条文は引けない（T2） |
 
@@ -41,6 +41,17 @@ pdf-writer-mcp が未接続なら成立しない。`npx @shuji-bonji/pdf-writer-
 **`ensure_pdfa` / `ensure_tagged` を使う案件は、水準にかかわらず pdf-verify-mcp が必須。**
 これらは文書に「規格に沿っています」と名乗らせるため、検査できないまま使うと
 **嘘の刻印を押したファイルを納品する**ことになる。verify が無いなら宣言も書かない。
+
+### 🔴 読み戻しで `scope.reconstructed` が true なら、それはこちらの欠陥
+
+verify v0.20.0+ は全ツールの報告の先頭に `scope` を返す。**自分が今書いた
+ファイルに対して `reconstructed: true` が返ったら、書いた相互参照表が読めて
+いない** —— verify が本文の `N G obj` を数え上げて表を作り直したという意味で、
+これは受け取った文書の性質ではなく **こちらの出力の欠陥**である。
+`chainStop.kind` が `complete` でない場合も同じ。
+
+合否の前に見ること。veraPDF が COMPLIANT を返しても、それは
+**組み直した表の上での判定**でしかない。
 
 ## 手順
 
