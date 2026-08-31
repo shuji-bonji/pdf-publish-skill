@@ -30,7 +30,7 @@ PDF family の出力（納品）パイプラインを担う Skill。pdf-trust �
 |---|---|---|
 | pdf-writer-mcp (v0.8.0+ / **v0.16.0+ 推奨**) | **必須** | 生成（Tier 0）・編集（Tier A/B）・PDF/UA 修復のすべて。**PDF/A-3b の器付け（`ensure_pdfa`）は v0.15.0 から・PDF/A-4 / -4f と PDF 2.0 出力は v0.16.0 から** |
 | pdf-verify-mcp (**v0.20.0+ 推奨**) | 品質ゲート案件では**必須** | identify_conformance / validate_conformance（veraPDF 委譲）/ verify_integrity。v0.20.0 から報告の先頭に `scope`（判定の射程）が入る |
-| pdf-reader-mcp (**v0.9.1+ 推奨**) | 推奨 | 読み戻し（テキスト抽出・論理順抽出・フォント・タグ・メタデータの観測） |
+| pdf-reader-mcp (**v0.14.0+ 推奨**) | 推奨 | 読み戻し（テキスト抽出・論理順抽出・フォント・タグ・メタデータの観測）。**v0.14.0 から `read_text` / `extract_structured_text` の応答に `scope`（どこまで読んだか）が入り、行われなかった読みの項目は `null` になる** —— 読み戻せたかどうかはここで決まる |
 | pdf-spec-mcp | 任意 | 違反時の ISO 32000 / 14289 条項の根拠引用。**ISO 19005（PDF/A）は収録外**なので PDF/A の条文は引けない（T2） |
 
 pdf-writer-mcp が未接続なら成立しない。`npx @shuji-bonji/pdf-writer-mcp@latest` の接続を
@@ -150,6 +150,15 @@ create_*（tagged はここで決める）
 ### Phase 2 — 読み戻し（reader・水準 readback 以上）
 
 生成物に対して観測する。**合否は言わない**（それは Phase 3 の仕事）:
+
+🔴 **reader v0.14.0 以降は、まず応答の `scope` を読む。** `read_text` と
+`extract_structured_text` は 2 つの別々の読み（ページから文字を取り出すこと・
+その文字が Unicode に変換できるかの観測）から作られ、どちらも単独で失敗する。
+`scope.textExtraction` が `failed` なら **`pages[].text` は `null`** であって
+空文字ではない。**`null` を「本文が空だった」として読み戻しに数えない** ——
+それは「読み戻せなかった」であり、下の照合はどれも成立していない。
+その場合は水準 `readback` を満たしていないので、Publish Report にそう書く
+（ゲートを通っていないのに「読み戻し済み」と名乗らない）。
 
 1. `read_text` — 意図した本文が抽出できるか（writer の既知リスク: 描画と抽出は独立に壊れる）
 2. **タグ付き出力では `extract_structured_text` も呼ぶ** — 論理順（ISO 32000-2 §14.8.2.5 の
