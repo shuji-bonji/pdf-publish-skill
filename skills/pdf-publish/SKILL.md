@@ -29,7 +29,7 @@ PDF family の出力（納品）パイプラインを担う Skill。pdf-trust �
 | MCP | 必須/任意 | 役割 |
 |---|---|---|
 | pdf-writer-mcp (v0.8.0+ / **v0.16.0+ 推奨**) | **必須** | 生成（Tier 0）・編集（Tier A/B）・PDF/UA 修復のすべて。**PDF/A-3b の器付け（`ensure_pdfa`）は v0.15.0 から・PDF/A-4 / -4f と PDF 2.0 出力は v0.16.0 から** |
-| pdf-verify-mcp (**v0.20.0+ 推奨**) | 品質ゲート案件では**必須** | identify_conformance / validate_conformance（veraPDF 委譲）/ verify_integrity。v0.20.0 から報告の先頭に `scope`（判定の射程）が入る |
+| pdf-verify-mcp (**v0.20.0+ 推奨**) | 品質ゲート案件では**必須** | identify_conformance / validate_conformance（veraPDF 委譲）/ verify_integrity。v0.20.0 から報告の先頭に `scope`（判定の射程）が入る。**v0.29.0 から `violations[]` は 200 件で切られる**（`violationsTruncated: { returned, total }` が付く）。違反の**数**は配列の長さではなく `failedRules` で取る（下記「差分採点」） |
 | pdf-reader-mcp (**v0.14.0+ 推奨**) | 推奨 | 読み戻し（テキスト抽出・論理順抽出・フォント・タグ・メタデータの観測）。**v0.14.0 から `read_text` / `extract_structured_text` の応答に `scope`（どこまで読んだか）が入り、行われなかった読みの項目は `null` になる** —— 読み戻せたかどうかはここで決まる |
 | pdf-spec-mcp | 任意 | 違反時の ISO 32000 / 14289 条項の根拠引用。**ISO 19005（PDF/A）は収録外**なので PDF/A の条文は引けない（T2） |
 
@@ -236,6 +236,11 @@ create_*（tagged はここで決める）
 | 違反数が増えた | **その操作が壊した。** 増えた clause を名指しで報告する |
 | 違反数が同じ | 元からの違反。編集の責任ではない（が納品可否には効く） |
 | 違反数が減った | 修復が効いている |
+
+違反数は **`failedRules`**（規則の数）で比べる。`violations[]` の長さで数えてはいけない —
+v0.29.0 から一覧は 200 件で切られ（`violationsTruncated`）、200 件を超える文書では差が消える。
+増えた規則を名指しするときは、`violationsTruncated` が立っていたら「一覧は全 <total> 件のうち
+<returned> 件」と添える。
 
 実測で確認された増加パターン（他実装での観測だが、同型の事故は自分の writer でも起こりうる）:
 署名の増分更新が PDF/A の字句規則（`obj` / `endobj` 前後の EOL）を破る、
