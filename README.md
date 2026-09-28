@@ -55,8 +55,8 @@ Four rules run through all of them:
 
 | MCP | Required? | Role |
 |---|---|---|
-| [@shuji-bonji/pdf-writer-mcp](https://github.com/shuji-bonji/pdf-writer-mcp) (v0.8.0+, **v0.17.0+ recommended**) | **Required** | create / edit / PDF/UA repair. **PDF/A-3b scaffolding (`ensure_pdfa`) landed in v0.15.0; PDF/A-4 / PDF/A-4f and PDF 2.0 output in v0.16.0; `declarationRisks` (a claim already known to fail) in v0.17.0** |
-| [@shuji-bonji/pdf-verify-mcp](https://github.com/shuji-bonji/pdf-verify-mcp) (**v0.7.0+ recommended**) | **Required** for the gate | declared conformance + verdicts via veraPDF |
+| [@shuji-bonji/pdf-writer-mcp](https://github.com/shuji-bonji/pdf-writer-mcp) (v0.8.0+, **v0.21.1+ recommended**) | **Required** | create / edit / PDF/UA repair. **PDF/A-3b scaffolding (`ensure_pdfa`) landed in v0.15.0; PDF/A-4 / PDF/A-4f and PDF 2.0 output in v0.16.0; `declarationRisks` (a claim already known to fail) in v0.17.0; from v0.21.1 `ensure_tagged` also returns the "claims, not checked" warning on success** |
+| [@shuji-bonji/pdf-verify-mcp](https://github.com/shuji-bonji/pdf-verify-mcp) (**v0.20.0+ recommended**) | **Required** for the gate | declared conformance + verdicts via veraPDF. v0.20.0 puts `scope` (the scope of the verdict) at the head of each report. From v0.26.1 PDF/A validation of an encrypted document returns `ENCRYPTED_PDF`. From v0.29.0 `violations[]` is capped at 200 (`violationsTruncated`); count violations with `failedRules` |
 | [@shuji-bonji/pdf-reader-mcp](https://github.com/shuji-bonji/pdf-reader-mcp) (**v0.14.0+ recommended**) | Recommended | read-back (text, logical order, fonts, tags). v0.14.0 adds `scope` to the read-back tools and makes a field whose reading did not happen `null` — that is what decides whether the read-back happened at all |
 | [@shuji-bonji/pdf-spec-mcp](https://github.com/shuji-bonji/pdf-spec-mcp) | Optional | ISO clause citations on violations. **ISO 19005 (PDF/A) is outside its corpus**, so PDF/A clauses cannot be quoted |
 

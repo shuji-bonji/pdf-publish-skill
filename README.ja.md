@@ -55,8 +55,8 @@ PDF family の設計原則は「**決定論的計算は MCP サーバ、手順�
 
 | MCP | 必須/任意 | 役割 |
 |---|---|---|
-| [@shuji-bonji/pdf-writer-mcp](https://github.com/shuji-bonji/pdf-writer-mcp) (v0.8.0+ / **v0.17.0+ 推奨**) | **必須** | 生成・編集・PDF/UA 修復。**PDF/A-3b の器付け（`ensure_pdfa`）は v0.15.0 から・PDF/A-4 / -4f と PDF 2.0 出力は v0.16.0 から・`declarationRisks`（測ると落ちると分かっている宣言）は v0.17.0 から** |
-| [@shuji-bonji/pdf-verify-mcp](https://github.com/shuji-bonji/pdf-verify-mcp) (**v0.7.0+ 推奨**) | 品質ゲートで**必須** | 宣言の識別と veraPDF 委譲の準拠判定 |
+| [@shuji-bonji/pdf-writer-mcp](https://github.com/shuji-bonji/pdf-writer-mcp) (v0.8.0+ / **v0.21.1+ 推奨**) | **必須** | 生成・編集・PDF/UA 修復。**PDF/A-3b の器付け（`ensure_pdfa`）は v0.15.0 から・PDF/A-4 / -4f と PDF 2.0 出力は v0.16.0 から・`declarationRisks`（測ると落ちると分かっている宣言）は v0.17.0 から・`ensure_tagged` が成功時にも「宣言を書いただけで適合は測っていない」warning を返すのは v0.21.1 から** |
+| [@shuji-bonji/pdf-verify-mcp](https://github.com/shuji-bonji/pdf-verify-mcp) (**v0.20.0+ 推奨**) | 品質ゲートで**必須** | 宣言の識別と veraPDF 委譲の準拠判定。v0.20.0 から報告の先頭に `scope`（判定の射程）が入る。v0.26.1 から暗号化された文書の PDF/A 検証は `ENCRYPTED_PDF` を返す。v0.29.0 から `violations[]` は 200 件で切られ（`violationsTruncated`）、違反の数は `failedRules` で取る |
 | [@shuji-bonji/pdf-reader-mcp](https://github.com/shuji-bonji/pdf-reader-mcp) (**v0.14.0+ 推奨**) | 推奨 | 読み戻し（テキスト・論理順・フォント・タグの観測）。v0.14.0 で読み戻しのツールに `scope` が付き、行われなかった読みの項目が `null` になった —— 読み戻せたかどうかはここで決まる |
 | [@shuji-bonji/pdf-spec-mcp](https://github.com/shuji-bonji/pdf-spec-mcp) | 任意 | 違反時の ISO 条項引用。**ISO 19005（PDF/A）は収録外**なので PDF/A の条文は引けない |
 

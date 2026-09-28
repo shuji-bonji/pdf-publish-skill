@@ -28,7 +28,7 @@ PDF family の出力（納品）パイプラインを担う Skill。pdf-trust �
 
 | MCP | 必須/任意 | 役割 |
 |---|---|---|
-| pdf-writer-mcp (v0.8.0+ / **v0.16.0+ 推奨**) | **必須** | 生成（Tier 0）・編集（Tier A/B）・PDF/UA 修復のすべて。**PDF/A-3b の器付け（`ensure_pdfa`）は v0.15.0 から・PDF/A-4 / -4f と PDF 2.0 出力は v0.16.0 から** |
+| pdf-writer-mcp (v0.8.0+ / **v0.21.1+ 推奨**) | **必須** | 生成（Tier 0）・編集（Tier A/B）・PDF/UA 修復のすべて。**PDF/A-3b の器付け（`ensure_pdfa`）は v0.15.0 から・PDF/A-4 / -4f と PDF 2.0 出力は v0.16.0 から・`declarationRisks`（測ると落ちると分かっている宣言）は v0.17.0 から・`ensure_tagged` が成功時にも CLAIMS … NOT checked の warning を返すのは v0.21.1 から** |
 | pdf-verify-mcp (**v0.20.0+ 推奨**) | 品質ゲート案件では**必須** | identify_conformance / validate_conformance（veraPDF 委譲）/ verify_integrity。v0.20.0 から報告の先頭に `scope`（判定の射程）が入る。**v0.29.0 から `violations[]` は 200 件で切られる**（`violationsTruncated: { returned, total }` が付く）。違反の**数**は配列の長さではなく `failedRules` で取る（下記「差分採点」） |
 | pdf-reader-mcp (**v0.14.0+ 推奨**) | 推奨 | 読み戻し（テキスト抽出・論理順抽出・フォント・タグ・メタデータの観測）。**v0.14.0 から `read_text` / `extract_structured_text` の応答に `scope`（どこまで読んだか）が入り、行われなかった読みの項目は `null` になる** —— 読み戻せたかどうかはここで決まる |
 | pdf-spec-mcp | 任意 | 違反時の ISO 32000 / 14289 条項の根拠引用。**ISO 19005（PDF/A）は収録外**なので PDF/A の条文は引けない（T2） |
@@ -218,8 +218,8 @@ create_*（tagged はここで決める）
   **水準が `none` / `readback` でも、`ensure_pdfa` を使ったなら PDF/A の検証だけは通す** —
   さもなくば「PDF/A-3b と名乗るが誰も検査していないファイル」を納品することになる
 - 同じ理由で **`ensure_tagged` を呼んだら `pdfua-1` を測る**
-- **`ensure_pdfa` は必ず warnings を返す**（「CLAIMS PDF/A-3b … conformance was NOT checked」。-4 なら「CLAIMS PDF/A-4」）。
-  これは異常ではなく設計。**レポートに転記する**。warnings が無ければ writer 側の欠陥を疑う
+- **`ensure_pdfa` と `ensure_tagged` は必ず warnings を返す**（「CLAIMS PDF/A-3b … conformance was NOT checked」。-4 なら「CLAIMS PDF/A-4」。`ensure_tagged` は「CLAIMS PDF/UA-1 (pdfuaid:part=1) … NOT checked」）。
+  これは異常ではなく設計。**レポートに転記する**。warnings が無ければ writer 側の欠陥を疑う（`ensure_tagged` は writer v0.21.0 まで、他に警告が無いとこの 1 行を返さなかった）
 
 > **⚠️ 上の 1.（`identify_conformance` とのペア呼び出し）は、自分で `ensure_pdfa` を掛けた
 > ファイルには「宣言が嘘か」の検査として働かない** — 読み取る自称は**自分が書いたもの**だから。
