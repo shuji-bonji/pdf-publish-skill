@@ -1,6 +1,6 @@
 ---
 name: pdf-publish
-description: PDF の生成・編集から納品までを品質ゲート付きで編成する出力パイプライン。pdf-writer-mcp で書き、pdf-reader-mcp で読み戻し、pdf-verify-mcp で機械採点（veraPDF）する write → read-back → verify ループを回し、Publish Report 付きで納品する。ユーザーが「PDF にして納品」「PDF/UA で作って」「アクセシブルな PDF」「タグ付き PDF の生成」「電帳法対応の PDF（PDF/A-3 添付）」「PDF/A-4 で作って」「品質保証付きで PDF を作って」「PDF を作って検証まで」「フォームを PDF/UA 準拠に」などに言及したら、単発の writer ツール呼び出しで済ませず必ずこの Skill を使う。pdf-trust（受入監査）の対になる送り出し側。
+description: PDF の生成・編集から納品までを品質ゲート付きで編成する出力パイプライン。pdf-writer-mcp で書き、pdf-reader-mcp で読み戻し、pdf-verify-mcp で機械採点（veraPDF）する write → read-back → verify ループを回し、Publish Report 付きで納品する。ユーザーが「PDF にして納品」「PDF/UA で作って」「アクセシブルな PDF」「タグ付き PDF の生成」「電帳法対応の PDF」「データを添付した PDF/A-3」「PDF/A-4 で作って」「品質保証付きで PDF を作って」「PDF を作って検証まで」「フォームを PDF/UA 準拠に」などに言及したら、単発の writer ツール呼び出しで済ませず必ずこの Skill を使う。pdf-trust（受入監査）の対になる送り出し側。
 ---
 
 # pdf-publish — 品質ゲート付き PDF 出力パイプライン
@@ -28,7 +28,7 @@ PDF family の出力（納品）パイプラインを担う Skill。pdf-trust �
 
 | MCP | 必須/任意 | 役割 |
 |---|---|---|
-| pdf-writer-mcp (v0.8.0+ / **v0.21.1+ 推奨**) | **必須** | 生成（Tier 0）・編集（Tier A/B）・PDF/UA 修復のすべて。**PDF/A-3b の器付け（`ensure_pdfa`）は v0.15.0 から・PDF/A-4 / -4f と PDF 2.0 出力は v0.16.0 から・`declarationRisks`（測ると落ちると分かっている宣言）は v0.17.0 から・`ensure_tagged` が成功時にも CLAIMS … NOT checked の warning を返すのは v0.21.1 から** |
+| pdf-writer-mcp (v0.8.0+ / **v0.23.1+ 推奨**) | **必須** | 生成（Tier 0）・編集（Tier A/B）・PDF/UA 修復のすべて。**PDF/A-3b の器付け（`ensure_pdfa`）は v0.15.0 から・PDF/A-4 / -4f と PDF 2.0 出力は v0.16.0 から・`declarationRisks`（測ると落ちると分かっている宣言）は v0.17.0 から・`ensure_tagged` が成功時にも CLAIMS … NOT checked の warning を返すのは v0.21.1 から・生成 3 ツールの `drawTitle` は v0.23.0 から** |
 | pdf-verify-mcp (**v0.20.0+ 推奨**) | 品質ゲート案件では**必須** | identify_conformance / validate_conformance（veraPDF 委譲）/ verify_integrity。v0.20.0 から報告の先頭に `scope`（判定の射程）が入る。**v0.29.0 から `violations[]` は 200 件で切られる**（`violationsTruncated: { returned, total }` が付く）。違反の**数**は配列の長さではなく `failedRules` で取る（下記「差分採点」） |
 | pdf-reader-mcp (**v0.14.0+ 推奨**) | 推奨 | 読み戻し（テキスト抽出・論理順抽出・フォント・タグ・メタデータの観測）。**v0.14.0 から `read_text` / `extract_structured_text` の応答に `scope`（どこまで読んだか）が入り、行われなかった読みの項目は `null` になる** —— 読み戻せたかどうかはここで決まる |
 | pdf-spec-mcp | 任意 | 違反時の ISO 32000 / 14289 条項の根拠引用。**ISO 19005（PDF/A）は収録外**なので PDF/A の条文は引けない（T2） |
@@ -73,9 +73,9 @@ verify v0.20.0+ は全ツールの報告の先頭に `scope` を返す。**自�
    | 要件 | flavour |
    |---|---|
    | `tagged`（アクセシビリティ） | `pdfua-1` |
-   | PDF/A-3 添付（電帳法・長期保存） | `pdfa-3b` |
+   | PDF/A-3 添付（請求書とデータの同梱・長期保存） | `pdfa-3b` |
    | **PDF/A-4（PDF 2.0 基盤の長期保存）・添付なし** | **`pdfa-4`** |
-   | **PDF/A-4 で添付あり（電帳法の CSV/JSON 同梱）** | **`pdfa-4f`** |
+   | **PDF/A-4 で添付あり（CSV/JSON の同梱）** | **`pdfa-4f`** |
    | 両方 | **`pdfua-1` と PDF/A 側の両方**を測る |
 
    PDF/A-3 と PDF/UA-1 はどちらも ISO 32000-1 基盤なので同時に宣言でき、実測で両立を確認済み
@@ -87,25 +87,39 @@ verify v0.20.0+ は全ツールの報告の先頭に `scope` を返す。**自�
 
    - **添付があるなら必ず `pdfa-4f`。** 素の `pdfa-4` は**添付ファイル自身が PDF/A であること**を
      要求する（veraPDF `ISO 19005-4:2020 6.9-3`）ので、CSV や JSON を同梱した瞬間に非適合になる。
-     **電帳法の使い方は事実上つねに `-4f`**
+     **添付を持つ文書で PDF/A-4 を選ぶなら、事実上つねに `-4f`**
    - **PDF/A-4 と PDF/UA は同時に測れない。** writer が書けるのは PDF/UA-1（PDF 1.7 基盤）だけで、
      PDF 2.0 の器に載せると測れない宣言になるため、`tagged` × PDF 2.0 は writer が拒否する。
      **アクセシビリティと PDF/A-4 の両方を求められたら、ここで「-3b + PDF/UA-1」に倒すか
      利用者に選ばせる**（黙ってどちらかを落とさない）
 
-   **-3b と -4 のどちらを勧めるか**: 実需が「電帳法の器」なら **-3b で足りている**（UC-4 は
-   -3b で充足済み）。-4 を選ぶのは「PDF 2.0 基盤で残したい」「-4 を指定された」ときに限る。
+   **-3b と -4 のどちらを勧めるか**: 実需が「請求書とデータを 1 つのファイルで渡す器」なら **-3b で足りている**
+   （UC-4 は -3b で充足済み）。-4 を選ぶのは「PDF 2.0 基盤で残したい」「-4 を指定された」ときに限る。
 
 3. **日本語の有無** → 含むなら `fontPath` / 環境変数 `PDF_WRITER_FONT` の確認。
    **`tagged: true` なら日本語が無くても埋め込みフォントが必須**（標準 Helvetica は
    PDF/UA-1 7.21.4.1 で必ず違反 — veraPDF 実測）。`title` も必須（7.1）
-4. **電帳法・PDF/A 文脈か** → attach_file の `relationship`（Data / Source）を確認し、
+   - **本文が `title` と同じ見出し（`# 題名`）で始まるなら、`drawTitle: false` を渡す**（writer v0.23.0 から）。
+     既定（`drawTitle` を渡さない）では writer が `title` を本文の先頭に描き、構造木の H1 になるので、
+     本文の `#` と合わせて **H1 が 2 つ並ぶ**。`drawTitle: false` なら `title` はメタデータ（`dc:title`）にだけ入り、
+     本文の最初の見出しが H1 になる。本文に題名の見出しが無いときは、既定のまま題名を描かせる
+   - writer が v0.23.0 より前なら `drawTitle` が無いので、本文から先頭の `# 題名` を外して `title` だけで渡す
+4. **PDF/A と添付の文脈か** → attach_file の `relationship`（Data / Source）を確認し、
    水準は項目 2 の **`pdfa-3b`**（または `pdfa-4f`）を選ぶ。
    **`ensure_pdfa` は writer v0.15.0 から・`flavour`（-4 / -4f）は v0.16.0 から**。
    それ以前を掴んでいる環境では器付けができない / -4 を選べないので、Phase 1 に進む前に
    利用者へ伝え、(a) 添付付き PDF（PDF/A は名乗らない）で合意する / (b) -3b に倒す /
    (c) writer を更新する のいずれかを選ばせる。
    **「無いツールを呼んで失敗してから気づく」を避ける**
+   - **「電帳法対応」と言われても、PDF/A と添付は電帳法の要件ではない。** 電子取引のデータの保存で
+     電帳法が求めるのは、タイムスタンプ・訂正削除の記録か防止ができるシステム・訂正削除の防止に関する
+     事務処理規程のいずれかの措置と、同項が準用する見読性・検索機能の要件（電子帳簿保存法施行規則 4 条 1 項）で、
+     ファイル形式は決めていない。この Skill が作れるのは PDF/A と添付の器で、その措置ではない
+   - なので「電帳法対応の PDF」と頼まれたら、(a) PDF/A も添付も法令の要件ではないことを伝え、
+     (b) 求めているのが「PDF/A で残したい」「データを同梱したい」のどちらか（両方か）を確かめてから、
+     項目 2 の水準を決める。Publish Report には「電帳法に対応した」と書かない
+     （書けるのは「PDF/A-3b を宣言し、veraPDF が適合と判定した」まで）。電帳法の要件の確認は
+     houki 系の MCP（houki-research Skill）の仕事
 5. **入力が署名済みか** → 編集すると署名は必ず無効化される。利用者の明示了解を得てから
    `allowBreakingSignatures: true` を付ける（勝手に付けない）
 6. **納品先**（絶対パス）と、**実行ログ**（JSONL）を残すか →
@@ -166,7 +180,9 @@ create_*（tagged はここで決める）
    「H1 は何と書いてあるか」「読み順は意図どおりか」の照合はこちらが向く
 3. `inspect_fonts` — フォントが埋め込まれているか（conformance 水準では必須の観測）
 4. `inspect_tags` — タグ付き指定時、構造木が意図どおりか（見出し階層・表・リスト）
-5. `get_metadata` — title / lang / producer
+5. `get_metadata` — title / lang / producer（**PDF 2.0 の出力（`pdfa-4`・`-4f`、PDF 2.0 で生成）では、
+   reader 0.18.1 の `get_metadata` は Info 辞書しか読まないので、題名・日付が `null` になる**
+   （pdf-reader-mcp#42）。題名の照合は XMP の `dc:title` で行い、`null` を「題名が無い」と書かない）
 
 #### 入力との照合（writer の戻り値を成功の証拠にしない）
 
@@ -177,8 +193,9 @@ create_*（tagged はここで決める）
   （実測: `create_markdown_pdf` は Markdown のインライン装飾記号を除去するため、
   `snake_case` の `_` が消えて `identify_conformance` → `identifyconformance` になる。
   **exit 0・warnings なし**で発生する）
-- 段落・見出しの件数が入力と一致するか（欠落・重複の検出。実測: `title` と本文の
-  先頭見出しが両方 H1 になり `H1` が 2 つになる）
+- 段落・見出しの件数が入力と一致するか（欠落・重複の検出。実測: `drawTitle` を渡さずに、
+  本文が `# 題名` で始まる Markdown を渡すと、`title` と本文の先頭見出しが両方 H1 になり
+  `H1` が 2 つになる。Phase 0 の項目 3 のとおり `drawTitle: false` で防ぐ）
 
 #### 要求した機能の実在確認
 

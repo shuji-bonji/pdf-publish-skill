@@ -42,7 +42,7 @@
 - ループ回数: 1（初回で通過）
 ```
 
-### 複数 flavour を測った場合（PDF/A も要る = 電帳法系・UC-4）
+### 複数 flavour を測った場合（PDF/A も要る = 請求書 + データ同梱・UC-4）
 
 **flavour ごとに 1 行ずつ書く。**「両方通った」と丸めない — 後から「どちらを測ったのか」が
 分からなくなる。**PDF/A の行には判定者（veraPDF）を明記する**（T2 = ISO 19005 の条文は引けない）。
@@ -98,7 +98,7 @@ PDF 専門 LLM（family の北極星）の学習データになる。
   "intent": "月次報告書を PDF/UA で PDF 化",          // 要求の要旨（PII を含めない）
   "gate": "conformance",
   "tool_calls": [
-    { "tool": "create_markdown_pdf", "args_shape": ["markdown", "title", "tagged", "lang", "fontPath", "outputPath"] },
+    { "tool": "create_markdown_pdf", "args_shape": ["markdown", "title", "drawTitle", "tagged", "lang", "fontPath", "outputPath"] },
     { "tool": "tag_form_fields", "args_shape": ["inputPath", "labels(3)", "outputPath"] }
   ],
   "readback": { "text_ok": true, "fonts_embedded": true, "tags_ok": true,
