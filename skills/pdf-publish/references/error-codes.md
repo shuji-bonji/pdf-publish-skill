@@ -75,10 +75,16 @@ Skill が書いた直後のファイルを読むので、ここでのエラー�
 | `INVALID_BYTE_RANGE` | 署名の `/ByteRange` が壊れている | `false` | 署名済み入力を編集した案件なら、署名が壊れた所見として報告する |
 | `INTERNAL_ERROR` | verify の故障 | `false` | 採点は未実施として書き、利用者へ報告。conformance 水準の案件は納品しない |
 
-**verify 0.33.x は移行の版**で、新しいコードに加えて旧名を `detail.legacyCode` に、
-`error`・`hint` と同じ値を `message`・`suggestion` にも入れている。分岐は `code` で行い、
-旧名（`FILE_NOT_FOUND`・`PARSE_FAILED`・`MISSING_PATH`・`RELATIVE_PATH`・`NOT_A_FILE`・
-`INVALID_FLAVOUR`）では分岐しない。次の minor で旧名は外れる。
+**旧い名前（外した）。** verify 0.33.x は移行の版で、新しいコードを返しながら旧名を
+`detail.legacyCode` に、`error`・`hint` と同じ値を `message`・`suggestion` に残していた。
+**verify 0.34.0 で旧名を外した。** 分岐は `code` で行う。旧名を読んでいた場合は次のように置き換える。
+
+| 旧名 | いまの名前 |
+|---|---|
+| `FILE_NOT_FOUND` | `DOC_NOT_FOUND` |
+| `PARSE_FAILED` | `INVALID_PDF` |
+| `MISSING_PATH`・`RELATIVE_PATH`・`NOT_A_FILE`・`INVALID_FLAVOUR` | `INVALID_ARGUMENT`（旧名は `detail.reason` にある） |
+| `message`・`suggestion` | `error`・`hint` |
 
 ## フォームフィールド名の発見
 
