@@ -30,8 +30,8 @@ PDF family の出力（納品）パイプラインを担う Skill。pdf-trust �
 
 | MCP | 必須/任意 | 役割 |
 |---|---|---|
-| pdf-writer-mcp (v0.8.0+ / **v0.23.1+ 推奨**) | **必須** | 生成（Tier 0）・編集（Tier A/B）・PDF/UA 修復のすべて。**PDF/A-3b の器付け（`ensure_pdfa`）は v0.15.0 から・PDF/A-4 / -4f と PDF 2.0 出力は v0.16.0 から・`declarationRisks`（測ると落ちると分かっている宣言）は v0.17.0 から・`ensure_tagged` が成功時にも CLAIMS … NOT checked の warning を返すのは v0.21.1 から・生成 3 ツールの `drawTitle` は v0.23.0 から** |
-| pdf-verify-mcp (**v0.20.0+ 推奨**) | 品質ゲート案件では**必須** | identify_conformance / validate_conformance（veraPDF 委譲）/ verify_integrity。v0.20.0 から報告の先頭に `scope`（判定の射程）が入る。**v0.29.0 から `violations[]` は 200 件で切られる**（`violationsTruncated: { returned, total }` が付く）。違反の**数**は配列の長さではなく `failedRules` で取る（下記「差分採点」） |
+| pdf-writer-mcp (v0.8.0+ / **v0.24.0+ 推奨**) | **必須** | 生成（Tier 0）・編集（Tier A/B）・PDF/UA 修復のすべて。**PDF/A-3b の器付け（`ensure_pdfa`）は v0.15.0 から・PDF/A-4 / -4f と PDF 2.0 出力は v0.16.0 から・`declarationRisks`（測ると落ちると分かっている宣言）は v0.17.0 から・`ensure_tagged` が成功時にも CLAIMS … NOT checked の warning を返すのは v0.21.1 から・生成 3 ツールの `drawTitle` は v0.23.0 から・PDF/UA を宣言した入力への `ensure_pdfa`（-4 / -4f）の拒否と、応答の `previousDeclaration`（`wasDeclared` を置き換えた）は v0.24.0 から** |
+| pdf-verify-mcp (**v0.35.0+ 推奨**) | 品質ゲート案件では**必須** | identify_conformance / validate_conformance（veraPDF 委譲）/ verify_integrity。v0.20.0 から報告の先頭に `scope`（判定の射程）が入る。**v0.29.0 から `violations[]` は 200 件で切られる**（`violationsTruncated: { returned, total }` が付く）。違反の**数**は配列の長さではなく `failedRules` で取る（下記「差分採点」）。**v0.35.0 から、鍵を導けない暗号化文書の PDF/A 判定はエンジンにかかわらず `ENCRYPTED_PDF`**（v0.34.x までは veraPDF の無い環境で、読めなかった XMP・OutputIntent を違反として返していた） |
 | pdf-reader-mcp (**v0.20.0+ 推奨**) | 推奨 | 読み戻し（テキスト抽出・論理順抽出・フォント・タグ・メタデータの観測）。**v0.14.0 から `read_text` / `extract_structured_text` の応答に `scope`（どこまで読んだか）が入り、行われなかった読みの項目は `null` になる** —— 読み戻せたかどうかはここで決まる。**v0.20.0 から `get_metadata` が XMP も読む**（PDF 2.0 の出力の題名・日付） |
 | pdf-spec-mcp | 任意 | 違反時の ISO 32000 / 14289 条項の根拠引用。**ISO 19005（PDF/A）は収録外**なので PDF/A の条文は引けない（T2） |
 
@@ -92,6 +92,9 @@ verify v0.20.0+ は全ツールの報告の先頭に `scope` を返す。**自�
      **添付を持つ文書で PDF/A-4 を選ぶなら、事実上つねに `-4f`**
    - **PDF/A-4 と PDF/UA は同時に測れない。** writer が書けるのは PDF/UA-1（PDF 1.7 基盤）だけで、
      PDF 2.0 の器に載せると測れない宣言になるため、`tagged` × PDF 2.0 は writer が拒否する。
+     **既存の PDF/UA 文書に `ensure_pdfa`（-4 / -4f）を掛けた場合も、writer v0.24.0 から
+     `INVALID_ARGUMENT` で拒否される**（ISO 14289-1 §6.1 は版を 1.0〜1.7 とする。`next_actions` は
+     `retry_with_flavour` で `pdfa-3b` を案内する）。
      **アクセシビリティと PDF/A-4 の両方を求められたら、ここで「-3b + PDF/UA-1」に倒すか
      利用者に選ばせる**（黙ってどちらかを落とさない）
 
@@ -149,6 +152,13 @@ create_*（tagged はここで決める）
 - **逆順は未検証**。後から `/AF` が増えると `AFRelationship` が `Unspecified` のままで
   PDF/A-3 の要件を外れうる。やむなく逆順になったら**そのつど測り直す**（順序を信用しない）
 - `ensure_pdfa` の後に本文・構造を変える操作を足さない。足したら PDF/A の判定はやり直し
+- **`ensure_pdfa` が `INVALID_ARGUMENT` を返し、`next_actions[0].action` が `retry_with_flavour` なら**、
+  入力が PDF/UA を宣言していて -4 と両立しない（writer v0.24.0〜）。**`example` の `pdfa-3b` に黙って
+  切り替えない。** Phase 0 の判断（「-3b + PDF/UA-1」に倒すか、利用者に選ばせる）に戻る
+- `ensure_pdfa` の応答の `previousDeclaration`（`{ part, conformance }` か `null`。v0.24.0 で
+  `wasDeclared` を置き換えた）で、入力がもともと何を名乗っていたかを Publish Report に書く。
+  `ensure_tagged` は、足したもの（`addedRequirements`）と書き直したもの（`replacedRequirements`）を
+  分けて返し、何も変えなければ `requirementsChanged: false` になる（v0.24.0〜。出力は書き出される）
 
 **既存 PDF の編集案件では、writer を呼ぶ前に入力を採点しておく**（`identify_conformance` +
 `validate_conformance`）。Phase 3 の差分採点の基準値になる。これが無いと
@@ -229,6 +239,12 @@ create_*（tagged はここで決める）
    native fallback だった場合、conformance 水準の判定は**保留**として扱う
 5. 署名済み入力を（了解の上で）編集した場合 → `verify_integrity` で「署名が無効化された」
    ことを**意図どおり**と確認し、レポートに明記する
+6. **鍵を導けない暗号化文書**（利用者パスワード付き）の PDF/A 判定は、verify v0.35.0 から
+   **エンジンにかかわらず `ENCRYPTED_PDF`**（`retryable: true`。`next_actions` が `password` を付けた
+   `validate_conformance` の呼び直しを案内する）。違反の一覧は返らない。パスワードを知っていれば
+   渡して測る。知らなければ PDF/A の判定は**未実施**と書く（「違反あり」とも「適合」とも書かない）。
+   PDF/UA の判定はエラーにならず、構造の規則を「見ていない」と返す（`ua-no-encryption-barrier`
+   だけは暗号化辞書から判定される）
 
 #### 🔴 「宣言を作るツール」を使ったら、検証は省略できない
 

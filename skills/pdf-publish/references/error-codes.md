@@ -40,10 +40,12 @@ reader 0.19.0・writer 0.23.3・verify 0.33.0・spec 0.12.0 から）。ツー�
 | `FONT_NOT_FOUND` | フォントのパス誤り | `true` | 絶対パスか・実在するかを確認して再試行 |
 | `MISSING_GLYPH` | フォント未収録文字 | `true` | 利用者に方針確認: 別フォント / `onMissingGlyph: "replace"`（〓置換）/ `"ignore"`。replace・ignore で進めた場合は warnings をレポートに転記 |
 | `DOC_NOT_FOUND` | 入力 PDF のパス誤り | `false` | 絶対パスか・実在するかを確認する。相対パスは受け付けない（`INVALID_ARGUMENT`） |
-| `ENCRYPTED_PDF` | 暗号化入力 | `false` | 復号済みファイルの用意を依頼（writer は復号を持たない） |
+| `ENCRYPTED_PDF` | 暗号化入力 | `false` | 復号済みファイルの用意を依頼（writer は復号も `password` 引数も持たない）。v0.24.0 から `detail.keyDerived` が付く: `true`（空の利用者パスワードで開ける）なら writer の外で復号すれば編集でき、読むだけなら reader・verify がそのまま読める。`false` なら利用者パスワードでの復号が要る。**v0.24.0 から暗号化を署名より先に確かめる**ので、署名付きの暗号化文書は `SIGNED_PDF` ではなくこれになる（`preserveSignatures` で再試行しない） |
 | `FILE_TOO_LARGE` | 入力 100MB 超 | `false` | 分割（split_pdf は入力側なので不可）や元データの縮小を相談 |
 | `UNSUPPORTED_PDF_FEATURE` | XFA フォーム等 | `false` | 対応不可と報告（XFA は ISO 32000-2 で非推奨・PDF/UA-1 7.15 で禁止） |
 | `INVALID_ARGUMENT` | 引数不正 | `true` | メッセージに違反フィールドが列挙される。修正して再試行。**tag_form_fields をタグ無し文書に当てた場合もこれ**（hint が create tagged / ensure_tagged へ誘導する） |
+| `INVALID_ARGUMENT`（`ensure_pdfa(flavour: "pdfa-4"/"pdfa-4f")` で、`next_actions[0].action` が `retry_with_flavour`） | 入力が PDF/UA を宣言していて、PDF/A-4 の PDF 2.0 ヘッダーと両立しない（v0.24.0〜） | `true` | `example` の `pdfa-3b` に**黙って切り替えない**。SKILL.md Phase 0 の判断（-3b + PDF/UA-1 に倒すか、利用者に選ばせる）に戻る |
+| `INVALID_ARGUMENT`（`detail.reason` が `PERMISSION_DENIED`・`NOT_A_DIRECTORY` など） | 出力先に書けない（v0.24.0〜。v0.23.x は `INTERNAL_ERROR`）。`error` と `detail.path` が**出力のパス**を名指す | `true` | 書ける `outputPath` に変えるか、フォルダーの権限を直して再試行する。`detail.cause` に元の例外の文がある |
 | `INVALID_PDF` | 入力が ISO 32000 の構造の条文に反していて読めない | `false` | 入力の入手元に差し戻し。pdf-trust skill での受入監査を提案。**サーバーの故障ではない** |
 | `INTERNAL_ERROR` | 想定外 | `false` | 再試行せず、引数とエラーを添えて利用者へ報告（バグの可能性） |
 
@@ -68,7 +70,7 @@ Skill が書いた直後のファイルを読むので、ここでのエラー�
 |---|---|---|---|
 | `VERAPDF_NOT_FOUND` / `VERAPDF_NOT_AVAILABLE` | veraPDF が無いか動かない | `true` | `PDF_VERIFY_VERAPDF` の設定を案内する。`engine: "native"` は検査サブセットなので、conformance 水準の判定は**保留**（SKILL.md Phase 3 の 4） |
 | `VERAPDF_NO_RESULT` | veraPDF は動いたが結果を返さなかった | `false` | 合格でも故障でもない。conformance 水準の判定は**保留**として書く |
-| `ENCRYPTED_PDF` | 暗号化されているので veraPDF に渡さなかった | `true` | PDF/UA なら `password` を渡して再試行。PDF/A はそもそも暗号化を許さない（ISO 19005）ので、veraPDF の実行は未実施として書く |
+| `ENCRYPTED_PDF` | 暗号化されているので判定しなかった。veraPDF のある環境の暗号化文書と、v0.35.0 からは**鍵を導けない暗号化文書の PDF/A 判定（エンジンにかかわらず）** | `true` | 鍵を導けない文書なら `next_actions` が `password` を付けた `validate_conformance` を案内する。パスワードを知っていれば渡して再試行。知らなければ PDF/A の判定は**未実施**として書く（「違反あり」とも書かない）。PDF/A はそもそも暗号化を許さない（ISO 19005）ので、鍵を導ける文書でも veraPDF の実行は未実施として書く |
 | `WRONG_PASSWORD` | パスワードが誤っているか、Standard 以外のセキュリティハンドラ | `true` | 利用者にパスワードを確かめる |
 | `INVALID_PDF` | 出力が構造の条文に反していて読めない | `false` | **構造の違反という所見**として扱う（「採点できなかった」に入れない）。納品しない |
 | `INVALID_ARGUMENT` | 引数不正（知らない `flavour` など。PDF/A-4 に `pdfa-4b` は無い） | `true` | `detail.reason` を見て引数を直す |
