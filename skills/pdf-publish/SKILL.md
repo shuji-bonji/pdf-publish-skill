@@ -16,8 +16,10 @@ PDF family の出力（納品）パイプラインを担う Skill。pdf-trust �
 2. 根拠（どのツールの何の結果か）をレポートに必ず明示する
 3. **パスは常に絶対パスで、writer には必ず `outputPath` を渡す** — 省略すると PDF が
    base64 で返り、数 MB の PDF で応答上限を溢れさせる（3.9MB → 530 万文字の実測あり）
-4. writer のエラーは構造化されている（`code` / `next_actions` / `retryable`）。
-   文字列を読んで推測せず、`code` で分岐し `next_actions` の指示に従う →
+4. writer・reader・verify のエラーは同じ形で構造化されている（`code` / `retryable` /
+   `next_actions`。family の規約 §2.3）。文字列を読んで推測せず、`code` で分岐し
+   `next_actions` の指示に従う。**読み戻しや採点のエラーを「未実施」と「所見」に分ける**
+   （`INVALID_PDF` は出力が壊れているという所見）→
    [references/error-codes.md](references/error-codes.md)
 5. **「宣言」と「適合」を混同しない。** `ensure_pdfa` / `ensure_tagged` は XMP に
    `pdfaid` / `pdfuaid` を書く = **その文書に「規格に沿っています」と名乗らせる**道具であって、
@@ -30,7 +32,7 @@ PDF family の出力（納品）パイプラインを担う Skill。pdf-trust �
 |---|---|---|
 | pdf-writer-mcp (v0.8.0+ / **v0.23.1+ 推奨**) | **必須** | 生成（Tier 0）・編集（Tier A/B）・PDF/UA 修復のすべて。**PDF/A-3b の器付け（`ensure_pdfa`）は v0.15.0 から・PDF/A-4 / -4f と PDF 2.0 出力は v0.16.0 から・`declarationRisks`（測ると落ちると分かっている宣言）は v0.17.0 から・`ensure_tagged` が成功時にも CLAIMS … NOT checked の warning を返すのは v0.21.1 から・生成 3 ツールの `drawTitle` は v0.23.0 から** |
 | pdf-verify-mcp (**v0.20.0+ 推奨**) | 品質ゲート案件では**必須** | identify_conformance / validate_conformance（veraPDF 委譲）/ verify_integrity。v0.20.0 から報告の先頭に `scope`（判定の射程）が入る。**v0.29.0 から `violations[]` は 200 件で切られる**（`violationsTruncated: { returned, total }` が付く）。違反の**数**は配列の長さではなく `failedRules` で取る（下記「差分採点」） |
-| pdf-reader-mcp (**v0.14.0+ 推奨**) | 推奨 | 読み戻し（テキスト抽出・論理順抽出・フォント・タグ・メタデータの観測）。**v0.14.0 から `read_text` / `extract_structured_text` の応答に `scope`（どこまで読んだか）が入り、行われなかった読みの項目は `null` になる** —— 読み戻せたかどうかはここで決まる |
+| pdf-reader-mcp (**v0.20.0+ 推奨**) | 推奨 | 読み戻し（テキスト抽出・論理順抽出・フォント・タグ・メタデータの観測）。**v0.14.0 から `read_text` / `extract_structured_text` の応答に `scope`（どこまで読んだか）が入り、行われなかった読みの項目は `null` になる** —— 読み戻せたかどうかはここで決まる。**v0.20.0 から `get_metadata` が XMP も読む**（PDF 2.0 の出力の題名・日付） |
 | pdf-spec-mcp | 任意 | 違反時の ISO 32000 / 14289 条項の根拠引用。**ISO 19005（PDF/A）は収録外**なので PDF/A の条文は引けない（T2） |
 
 pdf-writer-mcp が未接続なら成立しない。`npx @shuji-bonji/pdf-writer-mcp@latest` の接続を
@@ -180,9 +182,11 @@ create_*（tagged はここで決める）
    「H1 は何と書いてあるか」「読み順は意図どおりか」の照合はこちらが向く
 3. `inspect_fonts` — フォントが埋め込まれているか（conformance 水準では必須の観測）
 4. `inspect_tags` — タグ付き指定時、構造木が意図どおりか（見出し階層・表・リスト）
-5. `get_metadata` — title / lang / producer（**PDF 2.0 の出力（`pdfa-4`・`-4f`、PDF 2.0 で生成）では、
-   reader 0.18.1 の `get_metadata` は Info 辞書しか読まないので、題名・日付が `null` になる**
-   （pdf-reader-mcp#42）。題名の照合は XMP の `dc:title` で行い、`null` を「題名が無い」と書かない）
+5. `get_metadata` — title / lang / producer。**reader 0.20.0 から XMP も読む**（pdf-reader-mcp#42）。
+   PDF 2.0 の出力（`pdfa-4`・`-4f`、PDF 2.0 で生成）は Info 辞書を持たないことがあり、
+   reader 0.19.x 以前では題名・日付が `null` になっていた。`metadataSources.title` で
+   題名の出どころ（`info` / `xmp`）を、`metadataConflicts` で 2 つの値の食い違いを確かめる。
+   `xmpMetadata.status` が `unreadable` のときの `null` を「題名が無い」と書かない
 
 #### 入力との照合（writer の戻り値を成功の証拠にしない）
 
