@@ -30,7 +30,7 @@ PDF family の出力（納品）パイプラインを担う Skill。pdf-trust �
 
 | MCP | 必須/任意 | 役割 |
 |---|---|---|
-| pdf-writer-mcp (v0.8.0+ / **v0.24.0+ 推奨**) | **必須** | 生成（Tier 0）・編集（Tier A/B）・PDF/UA 修復のすべて。**PDF/A-3b の器付け（`ensure_pdfa`）は v0.15.0 から・PDF/A-4 / -4f と PDF 2.0 出力は v0.16.0 から・`declarationRisks`（測ると落ちると分かっている宣言）は v0.17.0 から・`ensure_tagged` が成功時にも CLAIMS … NOT checked の warning を返すのは v0.21.1 から・生成 3 ツールの `drawTitle` は v0.23.0 から・PDF/UA を宣言した入力への `ensure_pdfa`（-4 / -4f）の拒否と、応答の `previousDeclaration`（`wasDeclared` を置き換えた）は v0.24.0 から** |
+| pdf-writer-mcp (v0.8.0+ / **v0.26.0+ 推奨**) | **必須** | 生成（Tier 0）・編集（Tier A/B）・PDF/UA 修復のすべて。**PDF/A-3b の器付け（`ensure_pdfa`）は v0.15.0 から・PDF/A-4 / -4f と PDF 2.0 出力は v0.16.0 から・`declarationRisks`（測ると落ちると分かっている宣言）は v0.17.0 から・`ensure_tagged` が成功時にも CLAIMS … NOT checked の warning を返すのは v0.21.1 から・生成 3 ツールの `drawTitle` は v0.23.0 から・PDF/UA を宣言した入力への `ensure_pdfa`（-4 / -4f）の拒否と、応答の `previousDeclaration`（`wasDeclared` を置き換えた）は v0.24.0 から・標準フォントで WinAnsiEncoding の字（`“` `—` `€` など）を受け付け、`FONT_REQUIRED`・`MISSING_GLYPH` が原因の字を `detail.characters` に返すのは v0.26.0 から** |
 | pdf-verify-mcp (**v0.35.0+ 推奨**) | 品質ゲート案件では**必須** | identify_conformance / validate_conformance（veraPDF 委譲）/ verify_integrity。v0.20.0 から報告の先頭に `scope`（判定の射程）が入る。**v0.29.0 から `violations[]` は 200 件で切られる**（`violationsTruncated: { returned, total }` が付く）。違反の**数**は配列の長さではなく `failedRules` で取る（下記「差分採点」）。**v0.35.0 から、鍵を導けない暗号化文書の PDF/A 判定はエンジンにかかわらず `ENCRYPTED_PDF`**（v0.34.x までは veraPDF の無い環境で、読めなかった XMP・OutputIntent を違反として返していた） |
 | pdf-reader-mcp (**v0.20.0+ 推奨**) | 推奨 | 読み戻し（テキスト抽出・論理順抽出・フォント・タグ・メタデータの観測）。**v0.14.0 から `read_text` / `extract_structured_text` の応答に `scope`（どこまで読んだか）が入り、行われなかった読みの項目は `null` になる** —— 読み戻せたかどうかはここで決まる。**v0.20.0 から `get_metadata` が XMP も読む**（PDF 2.0 の出力の題名・日付） |
 | pdf-spec-mcp | 任意 | 違反時の ISO 32000 / 14289 条項の根拠引用。**ISO 19005（PDF/A）は収録外**なので PDF/A の条文は引けない（T2） |
@@ -101,7 +101,9 @@ verify v0.20.0+ は全ツールの報告の先頭に `scope` を返す。**自�
    **-3b と -4 のどちらを勧めるか**: 実需が「請求書とデータを 1 つのファイルで渡す器」なら **-3b で足りている**
    （UC-4 は -3b で充足済み）。-4 を選ぶのは「PDF 2.0 基盤で残したい」「-4 を指定された」ときに限る。
 
-3. **日本語の有無** → 含むなら `fontPath` / 環境変数 `PDF_WRITER_FONT` の確認。
+3. **標準フォントで書けない字（日本語など）の有無** → 含むなら `fontPath` / 環境変数 `PDF_WRITER_FONT` の確認。
+   標準 Helvetica で書けるのは WinAnsiEncoding の 218 字（ASCII・Latin-1 の文字と記号・`“` `”` `–` `—` `€` `…` `™` など）。
+   writer v0.26.0 から、それ以外の U+0100 以上の字だけが `FONT_REQUIRED` になる（v0.25.x までは U+0100 以上の字すべて）。
    **`tagged: true` なら日本語が無くても埋め込みフォントが必須**（標準 Helvetica は
    PDF/UA-1 7.21.4.1 で必ず違反 — veraPDF 実測）。`title` も必須（7.1）
    - **本文が `title` と同じ見出し（`# 題名`）で始まるなら、`drawTitle: false` を渡す**（writer v0.23.0 から）。
