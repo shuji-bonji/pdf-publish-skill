@@ -12,6 +12,7 @@
 - 実行した操作: create_markdown_pdf(tagged, fontPath=NotoSansJP)
     → tag_form_fields(labels: 3) → stamp_page_numbers → attach_file(Data)
     → flatten_form: **スキップ**（前段 tag_form_fields が未実行のため。失敗ではない）
+- 出力の版と宣言（最後の writer の結果の `output`。writer v0.28.0〜）: PDF 1.7 / `declares: { pdfua: 1 }`
 
 ## 読み戻し（reader・観測）
 
@@ -25,7 +26,7 @@
 
 ## 判定（verify）
 
-- identify_conformance（**自己申告**）: PDF/UA-1 宣言あり
+- identify_conformance（**自己申告**）: PDF/UA-1 宣言あり（writer の `output.declares` と一致）
 - validate_conformance（**第三者採点**）pdfua-1 → **COMPLIANT (106/106)** — engine: verapdf
 - 宣言と採点の差分: **一致**（乖離があればここに明記する）
 - （編集案件）入力の採点との差分: 1 違反 → 0 違反（修復が効いた）
@@ -104,6 +105,7 @@ PDF 専門 LLM（family の北極星）の学習データになる。
   "readback": { "text_ok": true, "fonts_embedded": true, "tags_ok": true,
                 "input_match": true, "features_present": ["attachment"] },
   "declared": { "pdfa": null, "pdfua": "1" },           // identify_conformance（自己申告）
+  "output": { "pdfVersion": "1.7", "declares": { "pdfua": 1 } },  // 最後の writer の結果（v0.28.0〜。無ければ null）
   "verdict": { "engine": "verapdf", "flavour": "pdfua-1", "compliant": true, "violations": [] },
   "baseline": null,                                     // 編集案件は入力採点の verdict を入れる
   "skipped": [],                                        // 前段失敗で実行しなかった段

@@ -1,6 +1,6 @@
 ---
 name: pdf-publish
-description: PDF の生成・編集から納品までを品質ゲート付きで編成する出力パイプライン。pdf-writer-mcp で書き、pdf-reader-mcp で読み戻し、pdf-verify-mcp で機械採点（veraPDF）する write → read-back → verify ループを回し、Publish Report 付きで納品する。ユーザーが「PDF にして納品」「PDF/UA で作って」「アクセシブルな PDF」「タグ付き PDF の生成」「電帳法対応の PDF」「データを添付した PDF/A-3」「PDF/A-4 で作って」「品質保証付きで PDF を作って」「PDF を作って検証まで」「フォームを PDF/UA 準拠に」などに言及したら、単発の writer ツール呼び出しで済ませず必ずこの Skill を使う。pdf-trust（受入監査）の対になる送り出し側。
+description: PDF の生成・編集から納品までを品質ゲート付きで編成する出力パイプライン。pdf-writer-mcp で書き、pdf-reader-mcp で読み戻し、pdf-verify-mcp で機械採点（veraPDF）する write → read-back → verify ループを回し、Publish Report 付きで納品する。ユーザーが「PDF にして納品」「PDF/UA で作って」「アクセシブルな PDF」「タグ付き PDF の生成」「電帳法対応の PDF」「データを添付した PDF/A-3」「PDF/A-4 で作って」「PDF/UA-2 で作って」「品質保証付きで PDF を作って」「PDF を作って検証まで」「フォームを PDF/UA 準拠に」などに言及したら、単発の writer ツール呼び出しで済ませず必ずこの Skill を使う。pdf-trust（受入監査）の対になる送り出し側。
 ---
 
 # pdf-publish — 品質ゲート付き PDF 出力パイプライン
@@ -30,7 +30,7 @@ PDF family の出力（納品）パイプラインを担う Skill。pdf-trust �
 
 | MCP | 必須/任意 | 役割 |
 |---|---|---|
-| pdf-writer-mcp (v0.8.0+ / **v0.26.0+ 推奨**) | **必須** | 生成（Tier 0）・編集（Tier A/B）・PDF/UA 修復のすべて。**PDF/A-3b の器付け（`ensure_pdfa`）は v0.15.0 から・PDF/A-4 / -4f と PDF 2.0 出力は v0.16.0 から・`declarationRisks`（測ると落ちると分かっている宣言）は v0.17.0 から・`ensure_tagged` が成功時にも CLAIMS … NOT checked の warning を返すのは v0.21.1 から・生成 3 ツールの `drawTitle` は v0.23.0 から・PDF/UA を宣言した入力への `ensure_pdfa`（-4 / -4f）の拒否と、応答の `previousDeclaration`（`wasDeclared` を置き換えた）は v0.24.0 から・標準フォントで WinAnsiEncoding の字（`“` `—` `€` など）を受け付け、`FONT_REQUIRED`・`MISSING_GLYPH` が原因の字を `detail.characters` に返すのは v0.26.0 から** |
+| pdf-writer-mcp (v0.8.0+ / **v0.28.1+ 推奨**) | **必須** | 生成（Tier 0）・編集（Tier A/B）・PDF/UA 修復のすべて。**PDF/A-3b の器付け（`ensure_pdfa`）は v0.15.0 から・PDF/A-4 / -4f と PDF 2.0 出力は v0.16.0 から・`declarationRisks`（測ると落ちると分かっている宣言）は v0.17.0 から・`ensure_tagged` が成功時にも CLAIMS … NOT checked の warning を返すのは v0.21.1 から・生成 3 ツールの `drawTitle` は v0.23.0 から・PDF/UA を宣言した入力への `ensure_pdfa`（-4 / -4f）の拒否と、応答の `previousDeclaration`（`wasDeclared` を置き換えた）は v0.24.0 から・標準フォントで WinAnsiEncoding の字（`“` `—` `€` など）を受け付け、`FONT_REQUIRED`・`MISSING_GLYPH` が原因の字を `detail.characters` に返すのは v0.26.0 から・`tagged: true` と `pdfVersion: "2.0"` で PDF/UA-2 を書き、PDF/UA-2 の入力に `pdfa-4` を通すのは v0.27.0 から・全ツールの結果の `output`（出力の版と宣言）と `merge_pdfs` の `pdfVersion`、PDF 2.0 の入力への `pdfa-3b` の拒否は v0.28.0 から・PDF/UA-2 の文書に足す注釈とウィジェットの `/Contents` を条文に合わせたのは v0.28.1 から** |
 | pdf-verify-mcp (**v0.35.0+ 推奨**) | 品質ゲート案件では**必須** | identify_conformance / validate_conformance（veraPDF 委譲）/ verify_integrity。v0.20.0 から報告の先頭に `scope`（判定の射程）が入る。**v0.29.0 から `violations[]` は 200 件で切られる**（`violationsTruncated: { returned, total }` が付く）。違反の**数**は配列の長さではなく `failedRules` で取る（下記「差分採点」）。**v0.35.0 から、鍵を導けない暗号化文書の PDF/A 判定はエンジンにかかわらず `ENCRYPTED_PDF`**（v0.34.x までは veraPDF の無い環境で、読めなかった XMP・OutputIntent を違反として返していた） |
 | pdf-reader-mcp (**v0.20.0+ 推奨**) | 推奨 | 読み戻し（テキスト抽出・論理順抽出・フォント・タグ・メタデータの観測）。**v0.14.0 から `read_text` / `extract_structured_text` の応答に `scope`（どこまで読んだか）が入り、行われなかった読みの項目は `null` になる** —— 読み戻せたかどうかはここで決まる。**v0.20.0 から `get_metadata` が XMP も読む**（PDF 2.0 の出力の題名・日付） |
 | pdf-spec-mcp | 任意 | 違反時の ISO 32000 / 14289 条項の根拠引用。**ISO 19005（PDF/A）は収録外**なので PDF/A の条文は引けない（T2） |
@@ -74,11 +74,14 @@ verify v0.20.0+ は全ツールの報告の先頭に `scope` を返す。**自�
 
    | 要件 | flavour |
    |---|---|
-   | `tagged`（アクセシビリティ） | `pdfua-1` |
+   | `tagged`（アクセシビリティ）・PDF 1.7（既定） | `pdfua-1` |
+   | **`tagged` と `pdfVersion: "2.0"`（PDF/UA-2。writer v0.27.0 から）** | **`pdfua-2`** |
    | PDF/A-3 添付（請求書とデータの同梱・長期保存） | `pdfa-3b` |
    | **PDF/A-4（PDF 2.0 基盤の長期保存）・添付なし** | **`pdfa-4`** |
    | **PDF/A-4 で添付あり（CSV/JSON の同梱）** | **`pdfa-4f`** |
-   | 両方 | **`pdfua-1` と PDF/A 側の両方**を測る |
+   | 両方 | **PDF/UA 側と PDF/A 側の両方**を測る（組み合わせは下の 2 つだけ） |
+
+   **測る flavour は、writer の結果の `output.declares` で確かめる**（writer v0.28.0 から。下の「測る flavour の決め方」）。
 
    PDF/A-3 と PDF/UA-1 はどちらも ISO 32000-1 基盤なので同時に宣言でき、実測で両立を確認済み
    （同一ファイルで 146/146 と 106/106）。ただし**「片方が通ったから他方も大丈夫」とは言えない**
@@ -90,13 +93,20 @@ verify v0.20.0+ は全ツールの報告の先頭に `scope` を返す。**自�
    - **添付があるなら必ず `pdfa-4f`。** 素の `pdfa-4` は**添付ファイル自身が PDF/A であること**を
      要求する（veraPDF `ISO 19005-4:2020 6.9-3`）ので、CSV や JSON を同梱した瞬間に非適合になる。
      **添付を持つ文書で PDF/A-4 を選ぶなら、事実上つねに `-4f`**
-   - **PDF/A-4 と PDF/UA は同時に測れない。** writer が書けるのは PDF/UA-1（PDF 1.7 基盤）だけで、
-     PDF 2.0 の器に載せると測れない宣言になるため、`tagged` × PDF 2.0 は writer が拒否する。
-     **既存の PDF/UA 文書に `ensure_pdfa`（-4 / -4f）を掛けた場合も、writer v0.24.0 から
-     `INVALID_ARGUMENT` で拒否される**（ISO 14289-1 §6.1 は版を 1.0〜1.7 とする。`next_actions` は
-     `retry_with_flavour` で `pdfa-3b` を案内する）。
-     **アクセシビリティと PDF/A-4 の両方を求められたら、ここで「-3b + PDF/UA-1」に倒すか
-     利用者に選ばせる**（黙ってどちらかを落とさない）
+   - **PDF/UA と PDF/A の組み合わせは版で決まる。** 両立するのは次の 2 つだけ:
+
+     | 版 | PDF/UA | PDF/A | 作り方 | 実測（veraPDF 1.30.0） |
+     |---|---|---|---|---|
+     | PDF 1.7 | PDF/UA-1（`pdfua-1`） | PDF/A-3b（`pdfa-3b`） | `create_*(tagged)` → `ensure_pdfa` | 106/106・146/146 |
+     | PDF 2.0 | PDF/UA-2（`pdfua-2`） | PDF/A-4（`pdfa-4` / `-4f`） | `create_*(tagged, pdfVersion: "2.0")` → `ensure_pdfa(flavour: "pdfa-4")` | 1,728/1,728・109/109 |
+
+     PDF/UA-1 は版を 1.0〜1.7 とし（ISO 14289-1 §6.1）、PDF/UA-2 は 2.0 とする（ISO 14289-2 §6.1）。
+     PDF/A-3 はヘッダーを `%PDF-1.n` に、PDF/A-4 は `%PDF-2.n` に限る。版をまたぐ組み合わせは
+     writer が `INVALID_ARGUMENT` で断る（PDF/UA-1 の入力に -4 は v0.24.0 から、PDF 2.0 の入力に
+     `pdfa-3b` は v0.27.0（PDF/UA-2）・v0.28.0（タグ無しも）から）。
+     **アクセシビリティと PDF/A-4 の両方を求められたら、新規生成なら PDF 2.0 で作る。** 既存の
+     PDF/UA-1 文書なら「-3b + PDF/UA-1」に倒すか、PDF 2.0 で作り直すかを利用者に選ばせる
+     （writer は既存の文書の版を上げて PDF/UA-1 を PDF/UA-2 に書き換えることはしない）
 
    **-3b と -4 のどちらを勧めるか**: 実需が「請求書とデータを 1 つのファイルで渡す器」なら **-3b で足りている**
    （UC-4 は -3b で充足済み）。-4 を選ぶのは「PDF 2.0 基盤で残したい」「-4 を指定された」ときに限る。
@@ -105,7 +115,7 @@ verify v0.20.0+ は全ツールの報告の先頭に `scope` を返す。**自�
    標準 Helvetica で書けるのは WinAnsiEncoding の 218 字（ASCII・Latin-1 の文字と記号・`“` `”` `–` `—` `€` `…` `™` など）。
    writer v0.26.0 から、それ以外の U+0100 以上の字だけが `FONT_REQUIRED` になる（v0.25.x までは U+0100 以上の字すべて）。
    **`tagged: true` なら日本語が無くても埋め込みフォントが必須**（標準 Helvetica は
-   PDF/UA-1 7.21.4.1 で必ず違反 — veraPDF 実測）。`title` も必須（7.1）
+   PDF/UA-1 7.21.4.1・PDF/UA-2 8.4.5.5.1 で必ず違反 — veraPDF 実測）。`title` も必須（PDF/UA-1 7.1）
    - **本文が `title` と同じ見出し（`# 題名`）で始まるなら、`drawTitle: false` を渡す**（writer v0.23.0 から）。
      既定（`drawTitle` を渡さない）では writer が `title` を本文の先頭に描き、構造木の H1 になるので、
      本文の `#` と合わせて **H1 が 2 つ並ぶ**。`drawTitle: false` なら `title` はメタデータ（`dc:title`）にだけ入り、
@@ -139,7 +149,9 @@ verify v0.20.0+ は全ツールの報告の先頭に `scope` を返す。**自�
 （順序の根拠は [references/conformance-notes.md](references/conformance-notes.md)）:
 
 ```
-create_*（tagged はここで決める）
+create_*（tagged と pdfVersion はここで決める）
+  （merge_pdfs / split_pdf などのページ操作は構造木と宣言を運ばない。タグ付き・PDF/A の成果物に
+   挟まない。挟んだら output.declares が {} になる）
   → tag_form_fields（タグ付き文書にフォームがある場合。labels 必須級）
   → add_bookmarks / add_annotation（alt を渡す）
   → stamp_page_numbers / add_watermark（タグ付きでは自動で Artifact 化される）
@@ -155,8 +167,11 @@ create_*（tagged はここで決める）
   PDF/A-3 の要件を外れうる。やむなく逆順になったら**そのつど測り直す**（順序を信用しない）
 - `ensure_pdfa` の後に本文・構造を変える操作を足さない。足したら PDF/A の判定はやり直し
 - **`ensure_pdfa` が `INVALID_ARGUMENT` を返し、`next_actions[0].action` が `retry_with_flavour` なら**、
-  入力が PDF/UA を宣言していて -4 と両立しない（writer v0.24.0〜）。**`example` の `pdfa-3b` に黙って
-  切り替えない。** Phase 0 の判断（「-3b + PDF/UA-1」に倒すか、利用者に選ばせる）に戻る
+  入力の版と求めた flavour が両立しない。理由は `example.flavour` で分かれる（エラーの文に入力の版と宣言が入る。v0.28.0〜）:
+  - `example.flavour` が `pdfa-3b` — 入力が PDF/UA-1 を宣言していて、-4（PDF 2.0）と両立しない（v0.24.0〜）
+  - `example.flavour` が `pdfa-4` — 入力が PDF 2.0 で、-3b（`%PDF-1.n`）と両立しない（PDF/UA-2 は v0.27.0〜、タグ無しは v0.28.0〜）
+
+  **どちらも `example` に黙って切り替えない。** Phase 0 の組み合わせの表に戻り、利用者に選ばせる
 - `ensure_pdfa` の応答の `previousDeclaration`（`{ part, conformance }` か `null`。v0.24.0 で
   `wasDeclared` を置き換えた）で、入力がもともと何を名乗っていたかを Publish Report に書く。
   `ensure_tagged` は、足したもの（`addedRequirements`）と書き直したもの（`replacedRequirements`）を
@@ -166,8 +181,19 @@ create_*（tagged はここで決める）
 `validate_conformance`）。Phase 3 の差分採点の基準値になる。これが無いと
 「元から壊れていた」と「自分が壊した」を区別できない（根拠は Phase 3 の差分採点を参照）。
 
-- 各ツールの `warnings` をすべて収集する（lang 推定・グリフ置換・/TU 代用など。
-  Phase 5 のレポートに全件載せる）
+- 各ツールの `warnings` をすべて収集する（lang 推定・グリフ置換・/TU 代用・
+  PDF/UA-2 の文書に `/NS` の無い構造要素を足したことなど。Phase 5 のレポートに全件載せる）
+- **各ツールの結果の `output`（`{ pdfVersion, declares }`。writer v0.28.0〜）を手順ごとに記録する。**
+  書いたファイルから読み戻した版と宣言で、引数から推測した値ではない。Phase 3 で測る flavour を
+  ここから決める。`merge_pdfs` などページ操作の後で `declares` が `{}` になっていたら、構造木と
+  宣言が運ばれなかったということ（タグ付けと `ensure_pdfa` をやり直す）
+- **`merge_pdfs` が `INVALID_ARGUMENT`（`next_actions[0].example` が `{ pdfVersion: "2.0" }`）を返したら、**
+  入力に PDF 2.0 と 1.x が混ざっている（v0.28.0〜。writer は版を黙って上げない）。`pdfVersion: "2.0"` は
+  明示した変換で、Info の題名などは XMP に移る。**PDF/A-3b を目標にしている案件では 2.0 にすると
+  -3b を名乗れなくなるので、黙って従わない。** Phase 0 の組み合わせの表に照らして利用者に選ばせる
+- **PDF/UA-2 の文書に `add_annotation` で `alt` を渡すと、`/Contents` にも同じ値が入る**（ISO 14289-2
+  §8.9.4.2 が同じ値を求める。v0.28.1〜）。`contents` と `alt` を違う値で渡すと `INVALID_ARGUMENT` になる
+  ので、PDF/UA-2 では 1 つの文を両方に使う
 - エラーが返ったら [references/error-codes.md](references/error-codes.md) の分岐に従う。
   ガード系（SIGNED_PDF / TAGGED_PDF）は**利用者に確認してから**解除フラグで再試行する
 - **前段が失敗したら、後段は「失敗」ではなく「スキップ」と記録する。** 直列化された操作は
@@ -234,8 +260,8 @@ create_*（tagged はここで決める）
    宣言だけでは実体を見逃す。
    **ただし自分で `ensure_pdfa` / `ensure_tagged` を掛けた場合、この検査は働かない**
    （読む自称が自分で書いたものになる）→ 下の ⚠️ を参照
-2. タグ付き出力 → `validate_conformance`（`flavour: "pdfua-1"`、engine は auto）
-3. PDF/A 宣言のある入出力 → `validate_conformance`（該当 flavour）
+2. タグ付き出力 → `validate_conformance`（`output.declares.pdfua` が 1 なら `pdfua-1`、2 なら `pdfua-2`。engine は auto）
+3. PDF/A 宣言のある入出力 → `validate_conformance`（`output.declares.pdfa` に対応する flavour）
 4. **採点結果の `engine` を先に読む。** `verapdf` なら権威的結果、`native` なら
    検査サブセットに過ぎない（`compliant: null` は「適合」ではない）。
    native fallback だった場合、conformance 水準の判定は**保留**として扱う
@@ -248,6 +274,22 @@ create_*（tagged はここで決める）
    PDF/UA の判定はエラーにならず、構造の規則を「見ていない」と返す（`ua-no-encryption-barrier`
    だけは暗号化辞書から判定される）
 
+#### 測る flavour の決め方（writer v0.28.0〜）
+
+最後に書いた writer の結果の `output.declares` から決める。**宣言したものはすべて測る**:
+
+| `output.declares` | 測る flavour |
+|---|---|
+| `pdfua: 1` | `pdfua-1` |
+| `pdfua: 2` | `pdfua-2` |
+| `pdfa: "3b"` | `pdfa-3b` |
+| `pdfa: "4"` | `pdfa-4` |
+| `pdfa: "4f"` | `pdfa-4f` |
+| `{}` | 宣言は無い。PDF/UA・PDF/A を要件にしていたなら、どこかの手順で宣言が落ちている（Phase 1 に戻る） |
+
+`declares` は**自己申告**で、writer は適合を確かめていない。合否は `validate_conformance` で採る。
+writer v0.27.x 以前で `output` が無いときは、`identify_conformance` の自己申告から決める。
+
 #### 🔴 「宣言を作るツール」を使ったら、検証は省略できない
 
 **`ensure_pdfa` と `ensure_tagged` は「宣言」を書く道具で、「適合」は作らない。**
@@ -256,8 +298,9 @@ create_*（tagged はここで決める）
   この 2 つは**不可分**。`ensure_pdfa` 単発で Phase 5 に進んではいけない。
   **水準が `none` / `readback` でも、`ensure_pdfa` を使ったなら PDF/A の検証だけは通す** —
   さもなくば「PDF/A-3b と名乗るが誰も検査していないファイル」を納品することになる
-- 同じ理由で **`ensure_tagged` を呼んだら `pdfua-1` を測る**
-- **`ensure_pdfa` と `ensure_tagged` は必ず warnings を返す**（「CLAIMS PDF/A-3b … conformance was NOT checked」。-4 なら「CLAIMS PDF/A-4」。`ensure_tagged` は「CLAIMS PDF/UA-1 (pdfuaid:part=1) … NOT checked」）。
+- 同じ理由で **`ensure_tagged` を呼んだら PDF/UA を測る**。PDF 1.x の入力なら `pdfua-1`、PDF 2.0 の入力なら
+  `pdfua-2`（writer v0.27.0 から、PDF 2.0 の入力には PDF/UA-2 を宣言する。`output.declares.pdfua` で確かめる）
+- **`ensure_pdfa` と `ensure_tagged` は必ず warnings を返す**（「CLAIMS PDF/A-3b … conformance was NOT checked」。-4 なら「CLAIMS PDF/A-4」。`ensure_tagged` は「CLAIMS PDF/UA-1 (pdfuaid:part=1) … NOT checked」、PDF 2.0 の入力では「CLAIMS PDF/UA-2 (pdfuaid:part=2, rev=2024) … NOT checked」）。
   これは異常ではなく設計。**レポートに転記する**。warnings が無ければ writer 側の欠陥を疑う（`ensure_tagged` は writer v0.21.0 まで、他に警告が無いとこの 1 行を返さなかった）
 
 > **⚠️ 上の 1.（`identify_conformance` とのペア呼び出し）は、自分で `ensure_pdfa` を掛けた
@@ -322,7 +365,7 @@ v0.29.0 から一覧は 200 件で切られ（`violationsTruncated`）、200 件
 ### PDF/A の判定を書くときの言い方（T2）
 
 **PDF/A は T2** = ISO 19005 が family のコーパスに無いので**条文を引けない**。
-**PDF/UA-1（ISO 14289-1）は T1** で条文を引ける。**同じレポートの中で書き方が変わる**ことに注意。
+**PDF/UA-1（ISO 14289-1）と PDF/UA-2（ISO 14289-2）は T1** で条文を引ける（pdf-spec-mcp の `pdfua1`・`pdfua2`）。**同じレポートの中で書き方が変わる**ことに注意。
 
 | 書いてよい | 書いてはいけない |
 |---|---|
@@ -330,6 +373,7 @@ v0.29.0 から一覧は 200 件で切られ（`violationsTruncated`）、200 件
 | 「**veraPDF が** PDF/A-4f **COMPLIANT と判定**（109/109）」 | 「ISO 19005-4 **準拠**」 |
 | 「veraPDF の指摘: `6.1.3-1` /ID 欠落」 | 「ISO 19005-3 §6.1.3 **に違反**」（条文を確認していない） |
 | 「PDF/UA-1 7.1 が文書タイトルを要求する（条文）」 | — （PDF/UA は T1 なので断定してよい） |
+| 「PDF/UA-2 §8.9.4.2 が注釈の Contents と Alt を同じ値にすることを要求する（条文）」 | — （同上） |
 
 **是正指示だけは条文まで降ろせる**（T2 → T1 の昇格ルート）。
 例: `/ID` 欠落 → 直し方は **ISO 32000-1 §14.4** を引いて示せる。

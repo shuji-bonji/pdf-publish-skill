@@ -1,11 +1,11 @@
-# 準拠の実測ノートと違反→修正対応表（PDF/UA-1 + PDF/A-3b + PDF/A-4）
+# 準拠の実測ノートと違反→修正対応表（PDF/UA-1 + PDF/UA-2 + PDF/A-3b + PDF/A-4）
 
 すべて veraPDF での実測に基づく（**PDF/UA-1** = `--flavour ua1`・106 規則 /
 **PDF/A-3b** = `--flavour 3b`・146 規則 / **PDF/A-4** = `--flavour 4`・**109 規則**、
 **PDF/A-4f** = `--flavour 4f`・109 規則）。
 判定は必ず pdf-verify-mcp の `validate_conformance` で取ること。
 
-> **PDF/UA-1（ISO 14289-1）は T1** = 条文を引ける。**PDF/A（ISO 19005）は T2** = 条文が家に無く、
+> **PDF/UA-1（ISO 14289-1）と PDF/UA-2（ISO 14289-2）は T1** = 条文を引ける。**PDF/A（ISO 19005）は T2** = 条文が家に無く、
 > 言えるのは「veraPDF はこう判定した」まで。**同じ文書の中で書き方が変わる**ことに注意。
 
 ## 違反 clause → writer 操作の対応表（Phase 4 修正ループ用）
@@ -20,6 +20,21 @@
 | 7.1-3（タグ外コンテンツ） | flatten の焼き込み、外部ツールの描画 | flatten を避ける。writer の watermark / stamp / annotation は自動で Artifact 化される |
 | 7.1（タイトル無し） | title 未指定 | `tagged: true` は `title` 必須（writer がエラーで止める） |
 | 7.2（/Lang） | 言語宣言の欠落・誤り | create 時に `lang` を明示（省略時は推定 + warnings） |
+
+### PDF/UA-2（`pdfua-2`）の違反 → writer 操作
+
+`create_*` に `tagged: true` と `pdfVersion: "2.0"` を渡すと PDF/UA-2 になる（writer v0.27.0〜。
+veraPDF 1.30.0 の `pdfua-2` は 1,728 規則）。PDF/UA-1 とは条番号が違う。
+
+| veraPDF の違反 | 原因 | writer での修正 |
+|---|---|---|
+| 8.4.5.5.1-1（フォント非埋め込み） | 標準フォント（Helvetica）使用。`stamp_page_numbers`・`add_watermark` を `fontPath` なしで使った場合も | `fontPath` を指定して再生成・再適用 |
+| 8.9.4.2-1（注釈の `Contents` と `Alt` が違う） | writer v0.28.0 以前の `add_annotation(alt)` | writer v0.28.1 以降で注釈を足し直す |
+| 8.10.2.3-1（ラベルの無いウィジェットに `Contents` が無い） | writer v0.28.0 以前の `tag_form_fields` | writer v0.28.1 以降で `tag_form_fields` を掛け直す（既に結んだウィジェットは飛ばすので、v0.28.0 以前の出力ではなく元の入力に掛ける） |
+
+- PDF/UA-2 の文書に `add_annotation`・`tag_form_fields` が足す構造要素は、PDF 1.7 の名前空間に入る
+  （ISO 14289-2 §8.2.4 は許す）。writer は warnings でそのことを伝える。違反ではない
+- PDF/UA-2 と PDF/A-4 は同じファイルで両立する（実測 `pdfua-2` 1,728/1,728・`pdfa-4` 109/109）
 
 **writer の能力外**（人手レビュー・Tier C 待ち）: 既存タグ木の再構成、読み順の修正、
 本文コンテンツの再タグ付け、画像への /Alt 後付け（B-4 実装まで）。
